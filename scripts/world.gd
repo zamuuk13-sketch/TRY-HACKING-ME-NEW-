@@ -1,6 +1,6 @@
 extends Node2D
 ## TRY HACKING ME NOW — Star 3 world foundation.
-## Level 01: fase compacta, câmera aproximada e poste com fundo branco removido via shader.
+## Level 01: fase compacta, câmera aproximada, poste recortado e limites laterais.
 
 var level_01_completed := false
 var pole_path := NodePath("Level01/Environment/StreetPole_07")
@@ -13,6 +13,7 @@ const LEVEL_HEIGHT := 720.0
 func _ready() -> void:
 	_setup_image_background()
 	_setup_pole_image()
+	_setup_left_boundary()
 	queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -80,6 +81,17 @@ func _setup_pole_image() -> void:
 		var target_height := 260.0
 		sprite.scale = Vector2.ONE * (target_height / image_size.y)
 	print("[ASSET OK] POSTE: ", POLE_PATH, " | ", image_size, " | escala ", sprite.scale)
+
+func _setup_left_boundary() -> void:
+	var boundary := get_node_or_null("Level01/LeftBoundary") as StaticBody2D
+	if boundary == null:
+		push_error("[COLLISION] LeftBoundary não existe na cena.")
+		return
+	boundary.position = Vector2(20.0, 360.0)
+	var shape := boundary.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape != null:
+		shape.disabled = false
+	print("[COLLISION OK] Barreia esquerda ativa em X=20")
 
 func _pole_still_blocks_path() -> bool:
 	var pole := get_node_or_null(pole_path)
