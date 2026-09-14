@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scenes/player.tscn" type="PackedScene" id="2_player"]
@@ -10,13 +10,31 @@
 size = Vector2(1280, 80)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_pole"]
-size = Vector2(44, 150)
+size = Vector2(28, 190)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_exit"]
 size = Vector2(40, 160)
 
+[sub_resource type="RectangleShape2D" id="Rectangle_left_boundary"]
+size = Vector2(40, 720)
+
 [sub_resource type="Shader" id="Shader_pole_no_bg"]
-code = "shader_type canvas_item;\n\nvoid fragment() {\n    vec4 c = texture(TEXTURE, UV);\n    float white = min(min(c.r, c.g), c.b);\n    float saturation = max(max(c.r, c.g), c.b) - white;\n    if (white > 0.90 && saturation < 0.12) {\n        discard;\n    }\n    COLOR = c;\n}"
+code = "shader_type canvas_item;
+
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    float max_channel = max(max(c.r, c.g), c.b);
+    float min_channel = min(min(c.r, c.g), c.b);
+    float saturation = max_channel - min_channel;
+    float luminance = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+
+    // Remove both the white and the classic light-gray checker/background dots.
+    if (saturation < 0.14 && luminance > 0.38) {
+        discard;
+    }
+
+    COLOR = c;
+}"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_pole_no_bg"]
 shader = SubResource("Shader_pole_no_bg")
@@ -58,7 +76,16 @@ position = Vector2(0, 0)
 texture_filter = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Environment/StreetPole_07"]
+position = Vector2(0, -15)
 shape = SubResource("Rectangle_pole")
+
+[node name="LeftBoundary" type="StaticBody2D" parent="World/Level01"]
+position = Vector2(20, 360)
+metadata/runtime_path = "World.Level01.LeftBoundary"
+metadata/description = "Barreira invisível que impede o jogador de sair pela lateral esquerda da fase."
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/LeftBoundary"]
+shape = SubResource("Rectangle_left_boundary")
 
 [node name="Level01Exit" type="Area2D" parent="World/Level01"]
 position = Vector2(1180, 350)
