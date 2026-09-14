@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scenes/player.tscn" type="PackedScene" id="2_player"]
@@ -27,7 +27,11 @@ script = ExtResource("3_world")
 [node name="PaperBackground" type="Sprite2D" parent="World"]
 texture = ExtResource("4_paper")
 position = Vector2(550, 360)
-z_index = -100
+scale = Vector2(1.622, 1.552)
+z_index = -10
+z_as_relative = false
+visible = true
+modulate = Color(1, 1, 1, 1)
 texture_filter = 1
 metadata/runtime_path = "World.Level01.Environment.PaperBackground"
 metadata/description = "PNG de papel usado como fundo real da fase."
@@ -44,13 +48,19 @@ shape = SubResource("Rectangle_floor")
 
 [node name="StreetPole_07" type="StaticBody2D" parent="World/Level01/Environment"]
 position = Vector2(620, 330)
-z_index = 10
+z_index = 20
+z_as_relative = false
 metadata/runtime_path = "World.Level01.Environment.StreetPole_07"
 metadata/description = "Poste PNG sem fundo que bloqueia o caminho até ser manipulado pelo runtime."
 
 [node name="Sprite2D" type="Sprite2D" parent="World/Level01/Environment/StreetPole_07"]
 texture = ExtResource("5_pole")
 position = Vector2(0, 0)
+scale = Vector2(0.68, 0.68)
+z_index = 20
+z_as_relative = false
+visible = true
+modulate = Color(1, 1, 1, 1)
 texture_filter = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Environment/StreetPole_07"]
