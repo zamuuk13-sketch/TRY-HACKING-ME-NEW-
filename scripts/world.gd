@@ -78,9 +78,10 @@ func _setup_pole_image() -> void:
 	sprite.z_index = 10
 	var image_size := texture.get_size()
 	if image_size.x > 0.0 and image_size.y > 0.0:
-		var target_height := 340.0
+		# Altura visual aproximada do personagem, sem alterar a largura manualmente.
+		var target_height := 84.0
 		sprite.scale = Vector2.ONE * (target_height / image_size.y)
-	print("[ASSET OK] POSTE: ", POLE_PATH, " | ", image_size, " | escala ", sprite.scale)
+	print("[ASSET OK] POSTE: ", POLE_PATH, " | ", image_size, " | altura ", target_height, " | escala ", sprite.scale)
 
 func _setup_left_boundary() -> void:
 	var boundary := get_node_or_null("Level01/LeftBoundary") as StaticBody2D
