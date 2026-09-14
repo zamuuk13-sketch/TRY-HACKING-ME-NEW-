@@ -1,43 +1,22 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scenes/player.tscn" type="PackedScene" id="2_player"]
 [ext_resource path="res://scripts/world.gd" type="Script" id="3_world"]
 [ext_resource path="res://imageens/papel.png" type="Texture2D" id="4_paper"]
-[ext_resource path="res://imageens/poste (2).png" type="Texture2D" id="5_pole"]
+[ext_resource path="res://imageens/poste sem fundo.png" type="Texture2D" id="5_pole"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_floor"]
-size = Vector2(1280, 80)
+size = Vector2(1100, 80)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_pole"]
-size = Vector2(28, 190)
+size = Vector2(32, 250)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_exit"]
 size = Vector2(40, 160)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_left_boundary"]
 size = Vector2(40, 720)
-
-[sub_resource type="Shader" id="Shader_pole_no_bg"]
-code = "shader_type canvas_item;
-
-void fragment() {
-    vec4 c = texture(TEXTURE, UV);
-    float max_channel = max(max(c.r, c.g), c.b);
-    float min_channel = min(min(c.r, c.g), c.b);
-    float saturation = max_channel - min_channel;
-    float luminance = dot(c.rgb, vec3(0.299, 0.587, 0.114));
-
-    // Remove both the white and the classic light-gray checker/background dots.
-    if (saturation < 0.14 && luminance > 0.38) {
-        discard;
-    }
-
-    COLOR = c;
-}"
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pole_no_bg"]
-shader = SubResource("Shader_pole_no_bg")
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_main")
@@ -47,14 +26,14 @@ script = ExtResource("3_world")
 
 [node name="PaperBackground" type="Sprite2D" parent="World"]
 texture = ExtResource("4_paper")
-position = Vector2(640, 360)
+position = Vector2(550, 360)
 z_index = -100
 texture_filter = 1
 metadata/runtime_path = "World.Level01.Environment.PaperBackground"
 metadata/description = "PNG de papel usado como fundo real da fase."
 
 [node name="Ground" type="StaticBody2D" parent="World"]
-position = Vector2(640, 430)
+position = Vector2(550, 430)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground"]
 shape = SubResource("Rectangle_floor")
@@ -64,23 +43,22 @@ shape = SubResource("Rectangle_floor")
 [node name="Environment" type="Node2D" parent="World/Level01"]
 
 [node name="StreetPole_07" type="StaticBody2D" parent="World/Level01/Environment"]
-position = Vector2(720, 330)
+position = Vector2(620, 330)
 z_index = 10
 metadata/runtime_path = "World.Level01.Environment.StreetPole_07"
-metadata/description = "Poste PNG real que bloqueia o caminho até ser manipulado pelo runtime."
+metadata/description = "Poste PNG sem fundo que bloqueia o caminho até ser manipulado pelo runtime."
 
 [node name="Sprite2D" type="Sprite2D" parent="World/Level01/Environment/StreetPole_07"]
 texture = ExtResource("5_pole")
-material = SubResource("ShaderMaterial_pole_no_bg")
 position = Vector2(0, 0)
 texture_filter = 1
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Environment/StreetPole_07"]
-position = Vector2(0, -15)
+position = Vector2(0, -25)
 shape = SubResource("Rectangle_pole")
 
 [node name="LeftBoundary" type="StaticBody2D" parent="World/Level01"]
-position = Vector2(20, 360)
+position = Vector2(25, 360)
 metadata/runtime_path = "World.Level01.LeftBoundary"
 metadata/description = "Barreira invisível que impede o jogador de sair pela lateral esquerda da fase."
 
@@ -88,7 +66,7 @@ metadata/description = "Barreira invisível que impede o jogador de sair pela la
 shape = SubResource("Rectangle_left_boundary")
 
 [node name="Level01Exit" type="Area2D" parent="World/Level01"]
-position = Vector2(1180, 350)
+position = Vector2(1030, 350)
 monitoring = true
 metadata/runtime_path = "World.Level01.Level01Exit"
 metadata/description = "Zona lógica além do lado direito da fase."
@@ -97,16 +75,16 @@ metadata/description = "Zona lógica além do lado direito da fase."
 shape = SubResource("Rectangle_exit")
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
-position = Vector2(160, 340)
+position = Vector2(130, 340)
 
 [node name="Camera" type="Camera2D" parent="Player"]
-position = Vector2(280, -10)
-zoom = Vector2(1.35, 1.35)
+position = Vector2(210, -5)
+zoom = Vector2(1.55, 1.55)
 position_smoothing_enabled = true
-position_smoothing_speed = 7.0
-limit_left = 80
+position_smoothing_speed = 8.0
+limit_left = 45
 limit_top = 0
-limit_right = 1200
+limit_right = 1050
 limit_bottom = 720
 
 [node name="UI" type="CanvasLayer" parent="."]
