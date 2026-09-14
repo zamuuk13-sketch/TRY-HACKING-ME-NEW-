@@ -1,12 +1,14 @@
 extends Node2D
 ## TRY HACKING ME NOW — Star 3 world foundation.
-## Level 01 carrega os PNGs de forma robusta e garante que sejam visíveis.
+## Level 01: fase compacta, câmera aproximada e poste com fundo branco removido via shader.
 
 var level_01_completed := false
 var pole_path := NodePath("Level01/Environment/StreetPole_07")
-const LEVEL_01_RIGHT_EXIT_X := 1660.0
+const LEVEL_01_RIGHT_EXIT_X := 1240.0
 const PAPER_PATH := "res://imageens/papel.png"
 const POLE_PATH := "res://imageens/poste (2).png"
+const LEVEL_WIDTH := 1280.0
+const LEVEL_HEIGHT := 720.0
 
 func _ready() -> void:
 	_setup_image_background()
@@ -48,13 +50,13 @@ func _setup_image_background() -> void:
 	if texture == null:
 		return
 	background.texture = texture
-	background.position = Vector2(900.0, 360.0)
+	background.position = Vector2(640.0, 360.0)
 	background.z_index = -100
 	background.visible = true
 	background.modulate = Color.WHITE
 	var image_size := texture.get_size()
 	if image_size.x > 0.0 and image_size.y > 0.0:
-		background.scale = Vector2(1800.0 / image_size.x, 720.0 / image_size.y)
+		background.scale = Vector2(LEVEL_WIDTH / image_size.x, LEVEL_HEIGHT / image_size.y)
 	print("[ASSET OK] PAPEL: ", PAPER_PATH, " | ", image_size, " | escala ", background.scale)
 
 func _setup_pole_image() -> void:
@@ -75,7 +77,7 @@ func _setup_pole_image() -> void:
 	sprite.z_index = 10
 	var image_size := texture.get_size()
 	if image_size.x > 0.0 and image_size.y > 0.0:
-		var target_height := 190.0
+		var target_height := 260.0
 		sprite.scale = Vector2.ONE * (target_height / image_size.y)
 	print("[ASSET OK] POSTE: ", POLE_PATH, " | ", image_size, " | escala ", sprite.scale)
 
