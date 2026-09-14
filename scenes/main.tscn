@@ -28,13 +28,12 @@ script = ExtResource("3_world")
 texture = ExtResource("4_paper")
 position = Vector2(550, 360)
 scale = Vector2(1.622, 1.552)
-z_index = -10
-z_as_relative = false
+z_index = 0
 visible = true
 modulate = Color(1, 1, 1, 1)
 texture_filter = 1
 metadata/runtime_path = "World.Level01.Environment.PaperBackground"
-metadata/description = "PNG de papel usado como fundo real da fase."
+metadata/description = "Papel PNG usado diretamente como fundo da Fase 01."
 
 [node name="Ground" type="StaticBody2D" parent="World"]
 position = Vector2(550, 430)
@@ -49,16 +48,14 @@ shape = SubResource("Rectangle_floor")
 [node name="StreetPole_07" type="StaticBody2D" parent="World/Level01/Environment"]
 position = Vector2(620, 330)
 z_index = 20
-z_as_relative = false
 metadata/runtime_path = "World.Level01.Environment.StreetPole_07"
-metadata/description = "Poste PNG sem fundo que bloqueia o caminho até ser manipulado pelo runtime."
+metadata/description = "Poste PNG sem fundo da Fase 01."
 
 [node name="Sprite2D" type="Sprite2D" parent="World/Level01/Environment/StreetPole_07"]
 texture = ExtResource("5_pole")
 position = Vector2(0, 0)
 scale = Vector2(0.68, 0.68)
 z_index = 20
-z_as_relative = false
 visible = true
 modulate = Color(1, 1, 1, 1)
 texture_filter = 1
@@ -70,7 +67,7 @@ shape = SubResource("Rectangle_pole")
 [node name="LeftBoundary" type="StaticBody2D" parent="World/Level01"]
 position = Vector2(25, 360)
 metadata/runtime_path = "World.Level01.LeftBoundary"
-metadata/description = "Barreira invisível que impede o jogador de sair pela lateral esquerda da fase."
+metadata/description = "Barreira invisível da lateral esquerda."
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/LeftBoundary"]
 shape = SubResource("Rectangle_left_boundary")
@@ -79,7 +76,7 @@ shape = SubResource("Rectangle_left_boundary")
 position = Vector2(1030, 350)
 monitoring = true
 metadata/runtime_path = "World.Level01.Level01Exit"
-metadata/description = "Zona lógica além do lado direito da fase."
+metadata/description = "Zona de saída da Fase 01."
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Level01Exit"]
 shape = SubResource("Rectangle_exit")
