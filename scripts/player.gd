@@ -1,6 +1,6 @@
 extends CharacterBody2D
 ## TRY HACKING ME NOW — animated Player controller
-## 32-frame procedural animation system for smoother, more natural motion.
+## 12-frame procedural animation with compact, natural stickman poses.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -12,8 +12,8 @@ extends CharacterBody2D
 @export var max_fall_speed: float = 1100.0
 
 @export_category("Animation")
-@export var animation_fps: float = 24.0
-@export var animation_frames: int = 32
+@export var animation_fps: float = 12.0
+@export var animation_frames: int = 12
 
 var facing_direction := 1.0
 var is_sprinting := false
@@ -80,84 +80,82 @@ func _draw() -> void:
 	var phase := float(f) / float(animation_frames)
 	var d := facing_direction
 
-	# Smooth 32-frame procedural motion using continuous sine curves.
+	# 12-frame smooth cycle with restrained limb movement.
 	var walk_phase := phase * TAU
 	var stride := sin(walk_phase)
-	var stride_opposite := sin(walk_phase + PI)
-	var bob := sin(walk_phase * 2.0) * 1.4
+	var opposite := sin(walk_phase + PI)
+	var bob := sin(walk_phase * 2.0) * 1.0
 
 	var head_y := -30.0 + bob
 	var shoulder_y := -17.0 + bob
-	var hip_y := 18.0
-	var arm_a := Vector2(20.0 + stride * 5.0, 2.0 + stride_opposite * 3.0)
-	var arm_b := Vector2(-17.0 + stride_opposite * 5.0, 5.0 + stride * 3.0)
-	var leg_a := Vector2(12.0 + stride_opposite * 9.0, 40.0 + abs(stride) * 2.0)
-	var leg_b := Vector2(-12.0 + stride * 9.0, 40.0 + abs(stride_opposite) * 2.0)
+	var hip_y := 17.0
+	var arm_a := Vector2(12.0 + stride * 5.0, 5.0 + opposite * 2.0)
+	var arm_b := Vector2(-12.0 + opposite * 5.0, 5.0 + stride * 2.0)
+	var leg_a := Vector2(7.0 + opposite * 7.0, 40.0)
+	var leg_b := Vector2(-7.0 + stride * 7.0, 40.0)
 
 	match animation_state:
 		"idle":
-			var idle_bob := sin(phase * TAU) * 1.2
-			head_y = -30.0 + idle_bob
-			shoulder_y = -17.0 + idle_bob
-			arm_a = Vector2(20.0, 2.0 + idle_bob)
-			arm_b = Vector2(-17.0, 5.0 + idle_bob)
-			leg_a = Vector2(12.0, 40.0)
-			leg_b = Vector2(-12.0, 40.0)
+			var idle := sin(phase * TAU)
+			head_y = -30.0 + idle * 0.7
+			shoulder_y = -17.0 + idle * 0.7
+			arm_a = Vector2(11.0, 5.0 + idle)
+			arm_b = Vector2(-11.0, 5.0 - idle)
+			leg_a = Vector2(6.0, 40.0)
+			leg_b = Vector2(-6.0, 40.0)
 		"walk":
-			# Natural alternating limbs across all 32 frames.
-			arm_a = Vector2(20.0 + stride * 9.0, 2.0 + stride_opposite * 5.0)
-			arm_b = Vector2(-17.0 + stride_opposite * 9.0, 5.0 + stride * 5.0)
-			leg_a = Vector2(12.0 + stride_opposite * 13.0, 40.0 - abs(stride) * 3.0)
-			leg_b = Vector2(-12.0 + stride * 13.0, 40.0 - abs(stride_opposite) * 3.0)
+			# Arms and legs stay close to the torso for a natural walk.
+			arm_a = Vector2(12.0 + stride * 6.0, 5.0 + opposite * 2.0)
+			arm_b = Vector2(-12.0 + opposite * 6.0, 5.0 + stride * 2.0)
+			leg_a = Vector2(7.0 + opposite * 8.0, 40.0 - abs(stride) * 1.5)
+			leg_b = Vector2(-7.0 + stride * 8.0, 40.0 - abs(opposite) * 1.5)
 		"run":
-			# Larger, faster stride for sprinting.
-			var run_phase := phase * TAU * 1.35
+			var run_phase := phase * TAU * 1.2
 			var rs := sin(run_phase)
 			var ro := sin(run_phase + PI)
-			bob = sin(run_phase * 2.0) * 2.2
-			head_y = -31.0 + bob
-			shoulder_y = -18.0 + bob
-			arm_a = Vector2(23.0 + rs * 12.0, -1.0 + ro * 8.0)
-			arm_b = Vector2(-21.0 + ro * 12.0, 7.0 + rs * 8.0)
-			leg_a = Vector2(13.0 + ro * 18.0, 42.0 - abs(rs) * 6.0)
-			leg_b = Vector2(-13.0 + rs * 18.0, 42.0 - abs(ro) * 6.0)
+			bob = sin(run_phase * 2.0) * 1.5
+			head_y = -30.5 + bob
+			shoulder_y = -17.5 + bob
+			arm_a = Vector2(15.0 + rs * 8.0, 2.0 + ro * 4.0)
+			arm_b = Vector2(-15.0 + ro * 8.0, 6.0 + rs * 4.0)
+			leg_a = Vector2(8.0 + ro * 11.0, 40.0 - abs(rs) * 3.0)
+			leg_b = Vector2(-8.0 + rs * 11.0, 40.0 - abs(ro) * 3.0)
 		"jump":
-			var jump_pose := sin(phase * TAU)
-			head_y = -32.0 + jump_pose * 1.2
-			arm_a = Vector2(18.0 + jump_pose * 4.0, -17.0 + jump_pose * 3.0)
-			arm_b = Vector2(-18.0 - jump_pose * 4.0, -12.0 - jump_pose * 3.0)
-			leg_a = Vector2(14.0 + jump_pose * 4.0, 30.0)
-			leg_b = Vector2(-14.0 - jump_pose * 4.0, 30.0)
+			var jump_phase := sin(phase * TAU)
+			head_y = -31.0 + jump_phase * 0.8
+			arm_a = Vector2(11.0 + jump_phase * 3.0, -10.0)
+			arm_b = Vector2(-11.0 - jump_phase * 3.0, -9.0)
+			leg_a = Vector2(8.0, 30.0)
+			leg_b = Vector2(-8.0, 30.0)
 		"fall":
-			var fall_pose := sin(phase * TAU)
-			arm_a = Vector2(24.0 + fall_pose * 3.0, 8.0)
-			arm_b = Vector2(-24.0 - fall_pose * 3.0, 8.0)
-			leg_a = Vector2(18.0 + fall_pose * 4.0, 42.0)
-			leg_b = Vector2(-18.0 - fall_pose * 4.0, 42.0)
+			arm_a = Vector2(14.0, 5.0)
+			arm_b = Vector2(-14.0, 5.0)
+			leg_a = Vector2(10.0, 40.0)
+			leg_b = Vector2(-10.0, 40.0)
 		"crouch":
-			var crouch_pose := sin(phase * TAU)
-			head_y = -18.0 + crouch_pose * 0.8
-			shoulder_y = -7.0 + crouch_pose * 0.8
-			hip_y = 15.0
-			arm_a = Vector2(21.0 + crouch_pose * 3.0, 12.0)
-			arm_b = Vector2(-20.0 - crouch_pose * 3.0, 14.0)
-			leg_a = Vector2(14.0 + crouch_pose * 5.0, 28.0)
-			leg_b = Vector2(-14.0 - crouch_pose * 5.0, 27.0)
+			var crouch_phase := sin(phase * TAU)
+			head_y = -19.0 + crouch_phase * 0.5
+			shoulder_y = -8.0 + crouch_phase * 0.5
+			hip_y = 14.0
+			arm_a = Vector2(13.0, 9.0)
+			arm_b = Vector2(-13.0, 10.0)
+			leg_a = Vector2(10.0 + crouch_phase * 2.0, 28.0)
+			leg_b = Vector2(-10.0 - crouch_phase * 2.0, 28.0)
 
 	arm_a.x *= d
 	arm_b.x *= d
 	leg_a.x *= d
 	leg_b.x *= d
 
-	# High-quality smooth stickman rendering.
+	# Clean, compact silhouette — no exaggerated X-shaped limbs.
 	draw_circle(Vector2(0, head_y), 14.0, outline)
 	draw_circle(Vector2(0, head_y), 10.5, body)
 	draw_line(Vector2(0, shoulder_y), Vector2(0, hip_y), outline, 7.0, true)
-	draw_line(Vector2(0, shoulder_y + 3.0), arm_a, outline, 6.0, true)
-	draw_line(Vector2(0, shoulder_y + 3.0), arm_b, outline, 6.0, true)
-	draw_line(Vector2(0, hip_y), leg_a, outline, 7.0, true)
-	draw_line(Vector2(0, hip_y), leg_b, outline, 7.0, true)
-	draw_circle(Vector2(4.0 * d, head_y - 1.0), 2.2, outline)
+	draw_line(Vector2(0, shoulder_y + 2.0), arm_a, outline, 5.5, true)
+	draw_line(Vector2(0, shoulder_y + 2.0), arm_b, outline, 5.5, true)
+	draw_line(Vector2(0, hip_y), leg_a, outline, 6.0, true)
+	draw_line(Vector2(0, hip_y), leg_b, outline, 6.0, true)
+	draw_circle(Vector2(4.0 * d, head_y - 1.0), 2.0, outline)
 
 	if is_sprinting:
-		draw_line(Vector2(-7, -43), Vector2(7, -43), accent, 3.0, true)
+		draw_line(Vector2(-6, -43), Vector2(6, -43), accent, 3.0, true)
