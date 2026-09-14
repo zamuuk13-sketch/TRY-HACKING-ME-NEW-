@@ -1,20 +1,17 @@
 extends Node2D
 ## TRY HACKING ME NOW — Star 3 world foundation.
-## Level 01: fase compacta, câmera próxima e assets visuais estáveis.
+## Level 01: assets visuais ficam definidos diretamente na cena.
 
 var level_01_completed := false
 var pole_path := NodePath("Level01/Environment/StreetPole_07")
 const LEVEL_01_RIGHT_EXIT_X := 1040.0
-const PAPER_PATH := "res://imageens/papel.png"
-const POLE_PATH := "res://imageens/poste sem fundo.png"
-const LEVEL_WIDTH := 1100.0
-const LEVEL_HEIGHT := 720.0
 
 func _ready() -> void:
+	# As imagens já estão vinculadas aos Sprite2D da main.tscn.
+	# Aqui apenas garantimos que os nós estejam visíveis e em frente/atrás na ordem correta.
 	_setup_image_background()
 	_setup_pole_image()
 	_setup_left_boundary()
-	queue_redraw()
 
 func _process(_delta: float) -> void:
 	if level_01_completed:
@@ -31,33 +28,20 @@ func _process(_delta: float) -> void:
 	if game and game.has_method("complete_level_01"):
 		game.complete_level_01()
 
-func _load_texture(path: String) -> Texture2D:
-	var texture := load(path) as Texture2D
-	if texture != null:
-		return texture
-	push_error("[ASSET] Falha ao carregar imagem: " + path)
-	return null
-
 func _setup_image_background() -> void:
 	var background := get_node_or_null("PaperBackground") as Sprite2D
 	if background == null:
 		push_error("[ASSET] PaperBackground não existe na cena.")
 		return
-
-	# A cena já possui a textura importada. Só carrega por caminho se ela estiver ausente.
 	if background.texture == null:
-		background.texture = _load_texture(PAPER_PATH)
-	if background.texture == null:
+		push_error("[ASSET] PaperBackground existe, mas está sem Texture2D.")
 		return
 
-	background.position = Vector2(550.0, 360.0)
-	background.z_index = -100
 	background.visible = true
 	background.modulate = Color.WHITE
-	var image_size := background.texture.get_size()
-	if image_size.x > 0.0 and image_size.y > 0.0:
-		background.scale = Vector2(LEVEL_WIDTH / image_size.x, LEVEL_HEIGHT / image_size.y)
-	print("[ASSET OK] PAPEL: ", PAPER_PATH, " | ", image_size, " | escala ", background.scale)
+	background.z_as_relative = false
+	background.z_index = -10
+	print("[ASSET OK] PAPEL NA CENA: ", background.texture.get_size())
 
 func _setup_pole_image() -> void:
 	var pole := get_node_or_null(pole_path)
@@ -68,21 +52,15 @@ func _setup_pole_image() -> void:
 	if sprite == null:
 		push_error("[ASSET] Sprite2D do poste não existe.")
 		return
-
-	# Mantém a textura da cena para evitar que o poste suma por falha de carregamento em runtime.
 	if sprite.texture == null:
-		sprite.texture = _load_texture(POLE_PATH)
-	if sprite.texture == null:
+		push_error("[ASSET] Sprite2D do poste existe, mas está sem Texture2D.")
 		return
 
 	sprite.visible = true
 	sprite.modulate = Color.WHITE
-	sprite.z_index = 10
-	var image_size := sprite.texture.get_size()
-	if image_size.x > 0.0 and image_size.y > 0.0:
-		var target_height := 340.0
-		sprite.scale = Vector2.ONE * (target_height / image_size.y)
-	print("[ASSET OK] POSTE: ", POLE_PATH, " | ", image_size, " | altura ", target_height, " | escala ", sprite.scale)
+	sprite.z_as_relative = false
+	sprite.z_index = 20
+	print("[ASSET OK] POSTE NA CENA: ", sprite.texture.get_size())
 
 func _setup_left_boundary() -> void:
 	var boundary := get_node_or_null("Level01/LeftBoundary") as StaticBody2D
@@ -101,6 +79,3 @@ func _pole_still_blocks_path() -> bool:
 		return false
 	var shape := pole.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	return shape != null and not shape.disabled
-
-func _draw() -> void:
-	pass
