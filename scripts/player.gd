@@ -1,6 +1,6 @@
 extends CharacterBody2D
 ## TRY HACKING ME NOW — animated Player controller
-## Four-frame procedural animations: idle, walk, run, jump, fall and crouch.
+## 4-frame procedural stickman animation with guaranteed visible rendering.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -20,6 +20,10 @@ var is_crouching := false
 var animation_time := 0.0
 var animation_frame := 0
 var animation_state := "idle"
+
+func _ready() -> void:
+	z_index = 100
+	queue_redraw()
 
 func _physics_process(delta: float) -> void:
 	var input_axis := Input.get_axis("move_left", "move_right")
@@ -68,14 +72,15 @@ func _update_animation(delta: float) -> void:
 			animation_frame = (animation_frame + 1) % 4
 
 func _draw() -> void:
-	var body := Color("f4f4f4")
-	var outline := Color("171717")
-	var accent := Color("e8b44d")
+	var body := Color(0.96, 0.96, 0.96, 1.0)
+	var outline := Color(0.04, 0.04, 0.04, 1.0)
+	var accent := Color(0.91, 0.71, 0.29, 1.0)
 	var f := animation_frame
 	var d := facing_direction
+
 	var head_y := -30.0
-	var top := -17.0
-	var hip := 18.0
+	var shoulder_y := -17.0
+	var hip_y := 18.0
 	var arm_a := Vector2(20, 2)
 	var arm_b := Vector2(-17, 5)
 	var leg_a := Vector2(12, 40)
@@ -83,29 +88,36 @@ func _draw() -> void:
 
 	match animation_state:
 		"walk":
-			var p := [[Vector2(20,4),Vector2(-18,3),Vector2(15,43),Vector2(-8,38)],[Vector2(18,1),Vector2(-18,1),Vector2(11,40),Vector2(-11,40)],[Vector2(8,3),Vector2(-21,5),Vector2(-8,38),Vector2(15,43)],[Vector2(18,1),Vector2(-18,1),Vector2(11,40),Vector2(-11,40)]][f]
+			var frames = [[Vector2(20,4),Vector2(-18,3),Vector2(15,43),Vector2(-8,38)],[Vector2(18,1),Vector2(-18,1),Vector2(11,40),Vector2(-11,40)],[Vector2(8,3),Vector2(-21,5),Vector2(-8,38),Vector2(15,43)],[Vector2(18,1),Vector2(-18,1),Vector2(11,40),Vector2(-11,40)]]
+			var p = frames[f]
 			arm_a=p[0]; arm_b=p[1]; leg_a=p[2]; leg_b=p[3]
 		"run":
-			var p := [[Vector2(25,0),Vector2(-19,9),Vector2(20,44),Vector2(-15,34)],[Vector2(19,-5),Vector2(-24,7),Vector2(10,35),Vector2(-18,45)],[Vector2(8,5),Vector2(-25,-1),Vector2(-18,35),Vector2(22,45)],[Vector2(19,-5),Vector2(-24,7),Vector2(10,35),Vector2(-18,45)]][f]
+			var frames = [[Vector2(25,0),Vector2(-19,9),Vector2(20,44),Vector2(-15,34)],[Vector2(19,-5),Vector2(-24,7),Vector2(10,35),Vector2(-18,45)],[Vector2(8,5),Vector2(-25,-1),Vector2(-18,35),Vector2(22,45)],[Vector2(19,-5),Vector2(-24,7),Vector2(10,35),Vector2(-18,45)]]
+			var p = frames[f]
 			arm_a=p[0]; arm_b=p[1]; leg_a=p[2]; leg_b=p[3]
 		"jump":
-			arm_a=Vector2(18,-17); arm_b=Vector2(-18,-12); leg_a=Vector2(14,30); leg_b=Vector2(-14,30); head_y=-32.0-f%2
+			arm_a=Vector2(18,-17); arm_b=Vector2(-18,-12); leg_a=Vector2(14,30); leg_b=Vector2(-14,30); head_y=-32.0-float(f%2)
 		"fall":
 			arm_a=Vector2(24,8); arm_b=Vector2(-24,8); leg_a=Vector2(18,42); leg_b=Vector2(-18,42)
 		"crouch":
-			head_y=-18.0; top=-7.0; hip=15.0; arm_a=Vector2(21,12); arm_b=Vector2(-20,14)
-			leg_a=[Vector2(14,28),Vector2(-10,25),Vector2(10,29),Vector2(-14,26)][f]; leg_b=Vector2(-leg_a.x,leg_a.y-2)
+			head_y=-18.0; shoulder_y=-7.0; hip_y=15.0; arm_a=Vector2(21,12); arm_b=Vector2(-20,14)
+			var crouch_legs=[Vector2(14,28),Vector2(-10,25),Vector2(10,29),Vector2(-14,26)]
+			leg_a=crouch_legs[f]; leg_b=Vector2(-leg_a.x,leg_a.y-2.0)
 		"idle":
-			var bob := [0.0,-1.0,0.0,1.0][f]
-			head_y+=bob; top+=bob; arm_a=Vector2(20,2+bob); arm_b=Vector2(-17,5+bob)
+			var bob=[0.0,-1.0,0.0,1.0][f]
+			head_y+=bob; shoulder_y+=bob; arm_a=Vector2(20,2+bob); arm_b=Vector2(-17,5+bob)
 
-	arm_a *= Vector2(d,1); arm_b *= Vector2(d,1); leg_a *= Vector2(d,1); leg_b *= Vector2(d,1)
-	draw_circle(Vector2(0,head_y),13.0,outline)
-	draw_circle(Vector2(0,head_y),10.0,body)
-	draw_line(Vector2(0,top),Vector2(0,hip),outline,6.0,true)
-	draw_line(Vector2(0,top+3),arm_a,outline,5.0,true)
-	draw_line(Vector2(0,top+3),arm_b,outline,5.0,true)
-	draw_line(Vector2(0,hip),leg_a,outline,6.0,true)
-	draw_line(Vector2(0,hip),leg_b,outline,6.0,true)
+	arm_a.x*=d; arm_b.x*=d; leg_a.x*=d; leg_b.x*=d
+
+	# Visible stickman: thick black outline + white body.
+	draw_circle(Vector2(0,head_y),14.0,outline)
+	draw_circle(Vector2(0,head_y),10.5,body)
+	draw_line(Vector2(0,shoulder_y),Vector2(0,hip_y),outline,7.0,true)
+	draw_line(Vector2(0,shoulder_y+3.0),arm_a,outline,6.0,true)
+	draw_line(Vector2(0,shoulder_y+3.0),arm_b,outline,6.0,true)
+	draw_line(Vector2(0,hip_y),leg_a,outline,7.0,true)
+	draw_line(Vector2(0,hip_y),leg_b,outline,7.0,true)
+	draw_circle(Vector2(4.0*d,head_y-1.0),2.2,outline)
+
 	if is_sprinting:
-		draw_line(Vector2(-7,-39),Vector2(7,-39),accent,3.0,true)
+		draw_line(Vector2(-7,-43),Vector2(7,-43),accent,3.0,true)
