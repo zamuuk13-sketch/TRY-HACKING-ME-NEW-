@@ -1,27 +1,62 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scenes/player.tscn" type="PackedScene" id="2_player"]
+[ext_resource path="res://scripts/world.gd" type="Script" id="3_world"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_floor"]
-size = Vector2(5000, 80)
+size = Vector2(10000, 80)
+
+[sub_resource type="RectangleShape2D" id="Rectangle_platform"]
+size = Vector2(300, 28)
+
+[sub_resource type="RectangleShape2D" id="Rectangle_platform2"]
+size = Vector2(240, 28)
+
+[sub_resource type="RectangleShape2D" id="Rectangle_platform3"]
+size = Vector2(180, 28)
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_main")
 
 [node name="World" type="Node2D" parent="."]
+script = ExtResource("3_world")
 
 [node name="Ground" type="StaticBody2D" parent="World"]
-position = Vector2(0, 390)
+position = Vector2(0, 430)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground"]
 shape = SubResource("Rectangle_floor")
 
-[node name="Player" parent="." instance=ExtResource("2_player")]
-position = Vector2(300, 300)
+[node name="Platform_A" type="StaticBody2D" parent="World"]
+position = Vector2(720, 320)
 
-[node name="Camera" type="Camera2D" parent="."]
-position = Vector2(640, 360)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Platform_A"]
+shape = SubResource("Rectangle_platform")
+
+[node name="Platform_B" type="StaticBody2D" parent="World"]
+position = Vector2(1250, 260)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Platform_B"]
+shape = SubResource("Rectangle_platform2")
+
+[node name="Platform_C" type="StaticBody2D" parent="World"]
+position = Vector2(1700, 350)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="World/Platform_C"]
+shape = SubResource("Rectangle_platform3")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(300, 340)
+
+[node name="Camera" type="Camera2D" parent="Player"]
+position = Vector2(280, -10)
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0
+limit_left = -640
+limit_top = 0
+limit_right = 5000
+limit_bottom = 720
 
 [node name="UI" type="CanvasLayer" parent="."]
 
