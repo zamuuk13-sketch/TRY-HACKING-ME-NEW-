@@ -1,6 +1,6 @@
 extends CharacterBody2D
 ## TRY HACKING ME NOW — animated Player controller
-## 12-frame procedural animation with compact, natural stickman poses.
+## Movimento com aceleração/desaceleração suave e animação procedural contínua.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -21,6 +21,7 @@ var is_crouching := false
 var animation_time := 0.0
 var animation_frame := 0
 var animation_state := "idle"
+var animation_phase := 0.0
 
 func _ready() -> void:
 	z_index = 100
@@ -35,6 +36,7 @@ func _physics_process(delta: float) -> void:
 	if is_crouching:
 		target_speed *= 0.45
 
+	# Movimento horizontal suavizado: acelera ao começar e desacelera ao soltar.
 	if input_axis != 0.0:
 		velocity.x = move_toward(velocity.x, input_axis * target_speed, acceleration * delta)
 		facing_direction = sign(input_axis)
@@ -66,21 +68,29 @@ func _update_animation(delta: float) -> void:
 		animation_state = next_state
 		animation_time = 0.0
 		animation_frame = 0
+		animation_phase = 0.0
 	else:
 		animation_time += delta
-		if animation_time >= 1.0 / animation_fps:
-			animation_time = 0.0
-			animation_frame = (animation_frame + 1) % animation_frames
+
+	# A animação agora usa uma fase contínua, em vez de trocar a pose de 12 em 12
+	# frames de forma seca. Isso elimina o "travamento" visual ao andar.
+	var animation_speed := animation_fps
+	if animation_state == "run":
+		animation_speed *= 1.2
+	elif animation_state == "idle":
+		animation_speed *= 0.45
+
+	animation_phase = fmod(animation_phase + delta * animation_speed / float(animation_frames), 1.0)
+	animation_frame = int(animation_phase * float(animation_frames)) % animation_frames
 
 func _draw() -> void:
 	var body := Color(0.96, 0.96, 0.96, 1.0)
 	var outline := Color(0.04, 0.04, 0.04, 1.0)
 	var accent := Color(0.91, 0.71, 0.29, 1.0)
-	var f := animation_frame
-	var phase := float(f) / float(animation_frames)
+	var phase := animation_phase
 	var d := facing_direction
 
-	# 12-frame smooth cycle with restrained limb movement.
+	# Fase contínua: braços, pernas e corpo não ficam presos aos 12 frames.
 	var walk_phase := phase * TAU
 	var stride := sin(walk_phase)
 	var opposite := sin(walk_phase + PI)
@@ -104,7 +114,6 @@ func _draw() -> void:
 			leg_a = Vector2(6.0, 40.0)
 			leg_b = Vector2(-6.0, 40.0)
 		"walk":
-			# Arms and legs stay close to the torso for a natural walk.
 			arm_a = Vector2(12.0 + stride * 6.0, 5.0 + opposite * 2.0)
 			arm_b = Vector2(-12.0 + opposite * 6.0, 5.0 + stride * 2.0)
 			leg_a = Vector2(7.0 + opposite * 8.0, 40.0 - abs(stride) * 1.5)
