@@ -1,10 +1,8 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scenes/player.tscn" type="PackedScene" id="2_player"]
 [ext_resource path="res://scripts/world.gd" type="Script" id="3_world"]
-[ext_resource path="res://imageens/papel.png" type="Texture2D" id="4_paper"]
-[ext_resource path="res://imageens/poste (2).png" type="Texture2D" id="5_pole"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_floor"]
 size = Vector2(1800, 80)
@@ -22,11 +20,10 @@ script = ExtResource("1_main")
 script = ExtResource("3_world")
 
 [node name="PaperBackground" type="Sprite2D" parent="World"]
-texture = ExtResource("4_paper")
 position = Vector2(800, 360)
-z_index = -100
+z_index = -10
 metadata/runtime_path = "World.Level01.Environment.PaperBackground"
-metadata/description = "Imagem PNG usada como fundo de papel da fase."
+metadata/description = "Imagem PNG de papel carregada pelo world.gd em runtime."
 
 [node name="Ground" type="StaticBody2D" parent="World"]
 position = Vector2(800, 430)
@@ -40,11 +37,11 @@ shape = SubResource("Rectangle_floor")
 
 [node name="StreetPole_07" type="StaticBody2D" parent="World/Level01/Environment"]
 position = Vector2(900, 330)
+z_index = 10
 metadata/runtime_path = "World.Level01.Environment.StreetPole_07"
-metadata/description = "Poste PNG que bloqueia fisicamente o caminho no Level 01. Deve ser manipulado pelo runtime Python para permitir a passagem."
+metadata/description = "Poste PNG carregado pelo world.gd. A colisão bloqueia o caminho até ser manipulada."
 
 [node name="Sprite2D" type="Sprite2D" parent="World/Level01/Environment/StreetPole_07"]
-texture = ExtResource("5_pole")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Environment/StreetPole_07"]
 shape = SubResource("Rectangle_pole")
