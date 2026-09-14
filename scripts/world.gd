@@ -1,13 +1,13 @@
 extends Node2D
 ## TRY HACKING ME NOW — Star 3 world foundation.
-## Level 01: fase compacta, câmera aproximada, poste recortado e limites laterais.
+## Level 01: fase ainda mais compacta, câmera mais próxima e poste PNG sem fundo.
 
 var level_01_completed := false
 var pole_path := NodePath("Level01/Environment/StreetPole_07")
-const LEVEL_01_RIGHT_EXIT_X := 1240.0
+const LEVEL_01_RIGHT_EXIT_X := 1040.0
 const PAPER_PATH := "res://imageens/papel.png"
-const POLE_PATH := "res://imageens/poste (2).png"
-const LEVEL_WIDTH := 1280.0
+const POLE_PATH := "res://imageens/poste sem fundo.png"
+const LEVEL_WIDTH := 1100.0
 const LEVEL_HEIGHT := 720.0
 
 func _ready() -> void:
@@ -51,7 +51,7 @@ func _setup_image_background() -> void:
 	if texture == null:
 		return
 	background.texture = texture
-	background.position = Vector2(640.0, 360.0)
+	background.position = Vector2(550.0, 360.0)
 	background.z_index = -100
 	background.visible = true
 	background.modulate = Color.WHITE
@@ -78,7 +78,7 @@ func _setup_pole_image() -> void:
 	sprite.z_index = 10
 	var image_size := texture.get_size()
 	if image_size.x > 0.0 and image_size.y > 0.0:
-		var target_height := 260.0
+		var target_height := 340.0
 		sprite.scale = Vector2.ONE * (target_height / image_size.y)
 	print("[ASSET OK] POSTE: ", POLE_PATH, " | ", image_size, " | escala ", sprite.scale)
 
@@ -87,11 +87,11 @@ func _setup_left_boundary() -> void:
 	if boundary == null:
 		push_error("[COLLISION] LeftBoundary não existe na cena.")
 		return
-	boundary.position = Vector2(20.0, 360.0)
+	boundary.position = Vector2(25.0, 360.0)
 	var shape := boundary.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if shape != null:
 		shape.disabled = false
-	print("[COLLISION OK] Barreia esquerda ativa em X=20")
+	print("[COLLISION OK] Barreira esquerda ativa em X=25")
 
 func _pole_still_blocks_path() -> bool:
 	var pole := get_node_or_null(pole_path)
