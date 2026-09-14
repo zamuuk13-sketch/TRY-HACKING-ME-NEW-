@@ -1,6 +1,6 @@
 ; TRY HACKING ME NOW
 ; Godot project foundation
-; Star 1 / 15 — Project Foundation
+; Star 2 upgrade — player animation input
 
 config_version=5
 
@@ -28,4 +28,5 @@ theme/default_font_multichannel_signed_distance_field=true
 move_left={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":65), Object(InputEventKey,"physical_keycode":4194311)]}
 move_right={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":68), Object(InputEventKey,"physical_keycode":4194313)]}
 jump={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":32)]}
+crouch={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":67), Object(InputEventKey,"physical_keycode":4194314)]}
 open_terminal={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":96)]}
