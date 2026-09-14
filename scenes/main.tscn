@@ -1,17 +1,19 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scenes/player.tscn" type="PackedScene" id="2_player"]
 [ext_resource path="res://scripts/world.gd" type="Script" id="3_world"]
+[ext_resource path="res://imageens/papel.png" type="Texture2D" id="4_paper"]
+[ext_resource path="res://imageens/poste (2).png" type="Texture2D" id="5_pole"]
 
 [sub_resource type="RectangleShape2D" id="Rectangle_floor"]
-size = Vector2(10000, 80)
+size = Vector2(1800, 80)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_pole"]
 size = Vector2(34, 118)
 
 [sub_resource type="RectangleShape2D" id="Rectangle_exit"]
-size = Vector2(20, 160)
+size = Vector2(40, 160)
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_main")
@@ -19,8 +21,15 @@ script = ExtResource("1_main")
 [node name="World" type="Node2D" parent="."]
 script = ExtResource("3_world")
 
+[node name="PaperBackground" type="Sprite2D" parent="World"]
+texture = ExtResource("4_paper")
+position = Vector2(800, 360)
+z_index = -100
+metadata/runtime_path = "World.Level01.Environment.PaperBackground"
+metadata/description = "Imagem PNG usada como fundo de papel da fase."
+
 [node name="Ground" type="StaticBody2D" parent="World"]
-position = Vector2(0, 430)
+position = Vector2(800, 430)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Ground"]
 shape = SubResource("Rectangle_floor")
@@ -32,16 +41,19 @@ shape = SubResource("Rectangle_floor")
 [node name="StreetPole_07" type="StaticBody2D" parent="World/Level01/Environment"]
 position = Vector2(900, 330)
 metadata/runtime_path = "World.Level01.Environment.StreetPole_07"
-metadata/description = "Poste de rua que bloqueia fisicamente o caminho no Level 01. Deve ser manipulado pelo runtime Python para permitir a passagem."
+metadata/description = "Poste PNG que bloqueia fisicamente o caminho no Level 01. Deve ser manipulado pelo runtime Python para permitir a passagem."
+
+[node name="Sprite2D" type="Sprite2D" parent="World/Level01/Environment/StreetPole_07"]
+texture = ExtResource("5_pole")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Environment/StreetPole_07"]
 shape = SubResource("Rectangle_pole")
 
 [node name="Level01Exit" type="Area2D" parent="World/Level01"]
-position = Vector2(965, 350)
+position = Vector2(1500, 350)
 monitoring = true
 metadata/runtime_path = "World.Level01.Level01Exit"
-metadata/description = "Zona de conclusão do Level 01. Só ativa a transição depois que o StreetPole_07 deixar de bloquear o caminho."
+metadata/description = "Zona lógica além do lado direito da fase. O Level 01 termina quando o Player sai por este lado depois de liberar o poste."
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Level01/Level01Exit"]
 shape = SubResource("Rectangle_exit")
@@ -53,9 +65,9 @@ position = Vector2(300, 340)
 position = Vector2(280, -10)
 position_smoothing_enabled = true
 position_smoothing_speed = 7.0
-limit_left = -640
+limit_left = 0
 limit_top = 0
-limit_right = 5000
+limit_right = 1600
 limit_bottom = 720
 
 [node name="UI" type="CanvasLayer" parent="."]
