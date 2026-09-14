@@ -7,10 +7,10 @@ var pole_path := NodePath("Level01/Environment/StreetPole_07")
 const LEVEL_01_RIGHT_EXIT_X := 1040.0
 
 func _ready() -> void:
-	# As imagens já estão vinculadas aos Sprite2D da main.tscn.
-	# Aqui apenas garantimos que os nós estejam visíveis e em frente/atrás na ordem correta.
-	_setup_image_background()
-	_setup_pole_image()
+	# Os Sprite2D já possuem suas texturas e ordem visual na main.tscn.
+	# Aqui apenas validamos que os assets existem e estão visíveis.
+	_verify_image_background()
+	_verify_pole_image()
 	_setup_left_boundary()
 
 func _process(_delta: float) -> void:
@@ -28,7 +28,7 @@ func _process(_delta: float) -> void:
 	if game and game.has_method("complete_level_01"):
 		game.complete_level_01()
 
-func _setup_image_background() -> void:
+func _verify_image_background() -> void:
 	var background := get_node_or_null("PaperBackground") as Sprite2D
 	if background == null:
 		push_error("[ASSET] PaperBackground não existe na cena.")
@@ -39,11 +39,9 @@ func _setup_image_background() -> void:
 
 	background.visible = true
 	background.modulate = Color.WHITE
-	background.z_as_relative = false
-	background.z_index = -10
-	print("[ASSET OK] PAPEL NA CENA: ", background.texture.get_size())
+	print("[ASSET OK] PAPEL: ", background.texture.resource_path, " | tamanho: ", background.texture.get_size())
 
-func _setup_pole_image() -> void:
+func _verify_pole_image() -> void:
 	var pole := get_node_or_null(pole_path)
 	if pole == null:
 		push_error("[ASSET] StreetPole_07 não existe na cena.")
@@ -58,9 +56,7 @@ func _setup_pole_image() -> void:
 
 	sprite.visible = true
 	sprite.modulate = Color.WHITE
-	sprite.z_as_relative = false
-	sprite.z_index = 20
-	print("[ASSET OK] POSTE NA CENA: ", sprite.texture.get_size())
+	print("[ASSET OK] POSTE: ", sprite.texture.resource_path, " | tamanho: ", sprite.texture.get_size())
 
 func _setup_left_boundary() -> void:
 	var boundary := get_node_or_null("Level01/LeftBoundary") as StaticBody2D
