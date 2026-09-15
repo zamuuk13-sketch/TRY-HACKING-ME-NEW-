@@ -70,9 +70,10 @@ func _update_facing() -> void:
 
 func _play_state(state: String) -> void:
 	animation_state = state
-	if not animation_player.has_animation(state):
-		state = "idle"
-	animation_player.play(state, 0.12 if state != "idle" else 0.18)
+	var clip := "walk" if state == "run" else state
+	if not animation_player.has_animation(clip):
+		clip = "idle"
+	animation_player.play(clip, 0.12 if clip != "idle" else 0.18)
 	animation_player.speed_scale = 1.0
 	if state == "walk":
 		animation_player.speed_scale = max(walk_cycle_fps / 12.0, 0.01)
