@@ -25,6 +25,7 @@ func _ready() -> void:
 	modulate = Color.WHITE
 	self_modulate = Color.WHITE
 	z_index = 100
+	_sanitize_rotation_tracks()
 	_reset_pose()
 	_play_state("idle")
 
@@ -70,7 +71,22 @@ func _update_animation_state() -> void:
 func _update_facing() -> void:
 	if visual_root == null:
 		return
+	# The character must never rotate as a whole. Facing is handled only by X scale.
+	visual_root.rotation = 0.0
 	visual_root.scale.x = abs(visual_root.scale.x) * facing_direction
+
+func _sanitize_rotation_tracks() -> void:
+	# Remove whole-body rotation tracks from the authored animations.
+	# Those tracks were making the character spin/tumble when AnimationPlayer
+	# looped or blended between states. Limbs keep their own rotation tracks.
+	for animation_name in [&"walk", &"jump", &"fall"]:
+		if not animation_player.has_animation(animation_name):
+			continue
+		var animation := animation_player.get_animation(animation_name)
+		for track_index in range(animation.get_track_count() - 1, -1, -1):
+			var path := animation.track_get_path(track_index)
+			if path == NodePath("Rig/VisualRoot:rotation"):
+				animation.remove_track(track_index)
 
 func _reset_pose() -> void:
 	visual_root.position = Vector2.ZERO
