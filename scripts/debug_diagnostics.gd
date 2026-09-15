@@ -1,22 +1,27 @@
 extends CanvasLayer
 ## TRY HACKING ME NOW — startup/runtime diagnostics.
 ## Observes the game without changing player physics, input or camera.
+## The panel is shown automatically only when launched with --debug-diagnostics.
 
 const PANEL_SIZE := Vector2(560, 430)
 const MARGIN := 18.0
+const DEBUG_FLAG := "--debug-diagnostics"
 
 var panel: ColorRect
 var text: Label
 var status: Label
-var visible_debug := true
+var visible_debug := false
 var f9_cooldown := 0.0
 var last_report := ""
 
 func _ready() -> void:
 	layer = 900
 	_build_ui()
+	visible_debug = DEBUG_FLAG in OS.get_cmdline_args()
+	panel.visible = visible_debug
 	_run_diagnostics()
 	print("[DEBUG] Startup diagnostics initialized.")
+	print("[DEBUG] Diagnostics panel: " + ("VISIBLE (debug BAT)" if visible_debug else "HIDDEN (normal launch)"))
 	print("[DEBUG] Press F9 to toggle the diagnostics panel.")
 
 func _process(delta: float) -> void:
