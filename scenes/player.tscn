@@ -9,13 +9,19 @@ height = 64.0
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_player")
+z_index = 1000
 
 [node name="StickmanSprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_stickman")
-position = Vector2(0, -2)
-scale = Vector2(0.62, 0.62)
+position = Vector2(0, -78)
+scale = Vector2(0.2, 0.2)
 z_index = 10
+z_as_relative = false
+visible = true
+modulate = Color(1, 1, 1, 1)
+self_modulate = Color(1, 1, 1, 1)
 texture_filter = 1
+centered = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 2)
