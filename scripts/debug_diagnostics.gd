@@ -32,7 +32,7 @@ func _process(delta: float) -> void:
 func _build_ui() -> void:
 	panel = ColorRect.new()
 	panel.name = "DiagnosticsPanel"
-	panel.position = Vector2(MARGIN, MARGIN)
+	panel.position = Vector2(700, MARGIN)
 	panel.size = PANEL_SIZE
 	panel.color = Color(0.015, 0.015, 0.02, 0.94)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
