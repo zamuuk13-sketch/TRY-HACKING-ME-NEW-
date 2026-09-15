@@ -1,12 +1,6 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource path="res://scripts/player.gd" type="Script" id="1_player"]
-[ext_resource path="res://imageens/CABEÇA DO STICKMAN.png" type="Texture2D" id="2_head"]
-[ext_resource path="res://imageens/TORÇO DO STICKMAN.png" type="Texture2D" id="3_torso"]
-[ext_resource path="res://imageens/BRAÇO_DIREITO.png" type="Texture2D" id="4_arm_r"]
-[ext_resource path="res://imageens/BRAÇO_ESQUERDO.png" type="Texture2D" id="5_arm_l"]
-[ext_resource path="res://imageens/PERNA DIREITA.png" type="Texture2D" id="6_leg_r"]
-[ext_resource path="res://imageens/PERNA ESQUERDA.png" type="Texture2D" id="7_leg_l"]
 
 [sub_resource type="CapsuleShape2D" id="Capsule_player"]
 radius = 11.0
@@ -14,39 +8,7 @@ height = 64.0
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_player")
-
-[node name="Visual" type="Node2D" parent="."]
 z_index = 100
-
-[node name="Torso" type="Sprite2D" parent="Visual"]
-texture = ExtResource("3_torso")
-texture_filter = 1
-centered = true
-
-[node name="Head" type="Sprite2D" parent="Visual"]
-texture = ExtResource("2_head")
-texture_filter = 1
-centered = true
-
-[node name="ArmRight" type="Sprite2D" parent="Visual"]
-texture = ExtResource("4_arm_r")
-texture_filter = 1
-centered = true
-
-[node name="ArmLeft" type="Sprite2D" parent="Visual"]
-texture = ExtResource("5_arm_l")
-texture_filter = 1
-centered = true
-
-[node name="LegRight" type="Sprite2D" parent="Visual"]
-texture = ExtResource("6_leg_r")
-texture_filter = 1
-centered = true
-
-[node name="LegLeft" type="Sprite2D" parent="Visual"]
-texture = ExtResource("7_leg_l")
-texture_filter = 1
-centered = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 2)
