@@ -1,6 +1,7 @@
 extends CharacterBody2D
-## TRY HACKING ME NOW — procedural player.
-## Movement is preserved. Walk uses a controlled 8-pose animation cycle.
+## TRY HACKING ME NOW — procedural 2D character.
+## The player is drawn as a small cutout-style rig and the walk is built from
+## explicit animation keyframes with interpolation between them.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -23,6 +24,42 @@ var animation_frame: int = 0
 var animation_state: String = "idle"
 var idle_time: float = 0.0
 var landing_punch: float = 0.0
+
+# Explicit walk keyframes. Every entry is a complete pose for the right-facing
+# character. The renderer mirrors the finished pose as one unit when facing left.
+# 0 Contact, 1 Down, 2 Passing, 3 Up, 4 Contact opposite, 5 Down, 6 Passing, 7 Up.
+var walk_knees_l: Array[Vector2] = [
+	Vector2(-9.0, 31.0), Vector2(-8.0, 32.0), Vector2(-4.0, 30.0), Vector2(1.0, 29.0),
+	Vector2(8.0, 31.0), Vector2(7.0, 32.0), Vector2(4.0, 30.0), Vector2(-1.0, 29.0)
+]
+var walk_knees_r: Array[Vector2] = [
+	Vector2(7.0, 30.0), Vector2(6.0, 31.0), Vector2(5.0, 30.0), Vector2(4.0, 29.0),
+	Vector2(-8.0, 31.0), Vector2(-7.0, 32.0), Vector2(-4.0, 30.0), Vector2(1.0, 29.0)
+]
+var walk_feet_l: Array[Vector2] = [
+	Vector2(-13.0, 52.0), Vector2(-11.0, 52.0), Vector2(-3.0, 51.0), Vector2(5.0, 50.0),
+	Vector2(4.0, 52.0), Vector2(2.0, 52.0), Vector2(-5.0, 51.0), Vector2(-8.0, 50.0)
+]
+var walk_feet_r: Array[Vector2] = [
+	Vector2(4.0, 52.0), Vector2(1.0, 52.0), Vector2(6.0, 51.0), Vector2(7.0, 50.0),
+	Vector2(13.0, 52.0), Vector2(11.0, 52.0), Vector2(3.0, 51.0), Vector2(-5.0, 50.0)
+]
+var walk_elbows_l: Array[Vector2] = [
+	Vector2(-12.0, -1.0), Vector2(-13.0, 1.0), Vector2(-15.0, 0.0), Vector2(-16.0, -3.0),
+	Vector2(-9.0, -2.0), Vector2(-10.0, 0.0), Vector2(-13.0, 0.0), Vector2(-15.0, -2.0)
+]
+var walk_elbows_r: Array[Vector2] = [
+	Vector2(14.0, -2.0), Vector2(15.0, 0.0), Vector2(13.0, 0.0), Vector2(10.0, -2.0),
+	Vector2(16.0, -3.0), Vector2(15.0, -1.0), Vector2(13.0, 0.0), Vector2(11.0, -2.0)
+]
+var walk_hands_l: Array[Vector2] = [
+	Vector2(-14.0, 12.0), Vector2(-15.0, 14.0), Vector2(-15.0, 11.0), Vector2(-17.0, 7.0),
+	Vector2(-7.0, 8.0), Vector2(-8.0, 10.0), Vector2(-12.0, 10.0), Vector2(-16.0, 8.0)
+]
+var walk_hands_r: Array[Vector2] = [
+	Vector2(16.0, 9.0), Vector2(17.0, 11.0), Vector2(13.0, 11.0), Vector2(9.0, 7.0),
+	Vector2(18.0, 8.0), Vector2(17.0, 10.0), Vector2(14.0, 11.0), Vector2(10.0, 8.0)
+]
 
 func _ready() -> void:
 	visible = true
@@ -84,18 +121,30 @@ func _update_animation(delta: float) -> void:
 		else:
 			animation_time += delta
 			var frame_duration: float = 1.0 / maxf(animation_fps, 1.0)
-			if animation_time >= frame_duration:
+			while animation_time >= frame_duration:
 				animation_time -= frame_duration
-				animation_frame = (animation_frame + 1) % max(animation_frames, 1)
+				animation_frame = (animation_frame + 1) % animation_frames
+
+func _walk_pose_pair() -> Array[Vector2]:
+	var next_frame: int = (animation_frame + 1) % animation_frames
+	var duration: float = 1.0 / maxf(animation_fps, 1.0)
+	var blend: float = clampf(animation_time / duration, 0.0, 1.0)
+	# Smoothstep gives soft acceleration/deceleration between authored keys.
+	blend = blend * blend * (3.0 - 2.0 * blend)
+	return [Vector2(blend, 0.0), Vector2(float(next_frame), 0.0)]
+
+func _lerp_pose(values: Array[Vector2], frame: int, blend: float) -> Vector2:
+	var next_frame: int = (frame + 1) % animation_frames
+	return values[frame].lerp(values[next_frame], blend)
 
 func _draw() -> void:
 	var skin: Color = Color(0.96, 0.96, 0.96, 1.0)
-	var skin_shadow: Color = Color(0.72, 0.74, 0.78, 1.0)
+	var skin_shadow: Color = Color(0.70, 0.72, 0.76, 1.0)
 	var outline: Color = Color(0.025, 0.028, 0.035, 1.0)
 	var shirt: Color = Color(0.12, 0.15, 0.19, 1.0)
-	var shirt_light: Color = Color(0.19, 0.23, 0.28, 1.0)
+	var shirt_light: Color = Color(0.20, 0.24, 0.29, 1.0)
 	var pants: Color = Color(0.065, 0.075, 0.095, 1.0)
-	var shoe: Color = Color(0.025, 0.028, 0.035, 1.0)
+	var shoe: Color = Color(0.02, 0.022, 0.028, 1.0)
 
 	var d: float = facing_direction
 	var body_y: float = 0.0
@@ -104,31 +153,30 @@ func _draw() -> void:
 	var shoulder_y: float = -14.0
 	var hip_y: float = 16.0
 
-	var left_knee: Vector2 = Vector2(-7.0, 31.0)
-	var right_knee: Vector2 = Vector2(7.0, 31.0)
-	var left_ankle: Vector2 = Vector2(-7.0, 49.0)
-	var right_ankle: Vector2 = Vector2(7.0, 49.0)
-	var left_foot: Vector2 = Vector2(-7.0, 52.0)
-	var right_foot: Vector2 = Vector2(7.0, 52.0)
-	var left_elbow: Vector2 = Vector2(-13.0, -1.0)
-	var right_elbow: Vector2 = Vector2(13.0, -1.0)
-	var left_hand: Vector2 = Vector2(-14.0, 11.0)
-	var right_hand: Vector2 = Vector2(14.0, 11.0)
+	var knee_l: Vector2 = Vector2(-7.0, 31.0)
+	var knee_r: Vector2 = Vector2(7.0, 31.0)
+	var foot_l: Vector2 = Vector2(-7.0, 52.0)
+	var foot_r: Vector2 = Vector2(7.0, 52.0)
+	var elbow_l: Vector2 = Vector2(-13.0, -1.0)
+	var elbow_r: Vector2 = Vector2(13.0, -1.0)
+	var hand_l: Vector2 = Vector2(-14.0, 11.0)
+	var hand_r: Vector2 = Vector2(14.0, 11.0)
 
 	if animation_state == "walk":
-		_apply_walk_pose(animation_frame, left_knee, right_knee, left_ankle, right_ankle, left_foot, right_foot, left_elbow, right_elbow, left_hand, right_hand)
-		var pose_body_y: float = 0.0
-		match animation_frame:
-			0, 4:
-				pose_body_y = 0.0
-			1, 5:
-				pose_body_y = 1.8
-			2, 6:
-				pose_body_y = -0.8
-			3, 7:
-				pose_body_y = -1.6
-		body_y = pose_body_y
-		body_lean = 1.0 * d
+		var frame_duration: float = 1.0 / maxf(animation_fps, 1.0)
+		var blend: float = clampf(animation_time / frame_duration, 0.0, 1.0)
+		blend = blend * blend * (3.0 - 2.0 * blend)
+		knee_l = _lerp_pose(walk_knees_l, animation_frame, blend)
+		knee_r = _lerp_pose(walk_knees_r, animation_frame, blend)
+		foot_l = _lerp_pose(walk_feet_l, animation_frame, blend)
+		foot_r = _lerp_pose(walk_feet_r, animation_frame, blend)
+		elbow_l = _lerp_pose(walk_elbows_l, animation_frame, blend)
+		elbow_r = _lerp_pose(walk_elbows_r, animation_frame, blend)
+		hand_l = _lerp_pose(walk_hands_l, animation_frame, blend)
+		hand_r = _lerp_pose(walk_hands_r, animation_frame, blend)
+		var cycle_phase: float = (float(animation_frame) + blend) / 8.0
+		body_y = sin(cycle_phase * TAU) * 1.35
+		body_lean = 0.9 * d
 	else:
 		var breath: float = sin(idle_time * TAU * 0.85)
 		body_y = breath * 0.45
@@ -136,175 +184,78 @@ func _draw() -> void:
 			body_y = -1.0
 			body_lean = 2.0 * d
 		elif animation_state == "crouch":
-			body_y = 10.0
+			body_y = 9.0
 			head_y = -22.0
 			shoulder_y = -7.0
 			hip_y = 20.0
 		elif animation_state == "jump":
 			body_y = -2.0
-			body_lean = 3.0 * d
+			body_lean = 2.0 * d
 		elif animation_state == "fall":
 			body_y = 2.0
-			body_lean = -2.0 * d
+			body_lean = -1.5 * d
+
+	# The entire rig is mirrored as a single coordinate system. This prevents
+	# the old left-facing deformation where individual limbs were flipped twice.
+	knee_l.x *= d
+	knee_r.x *= d
+	foot_l.x *= d
+	foot_r.x *= d
+	elbow_l.x *= d
+	elbow_r.x *= d
+	hand_l.x *= d
+	hand_r.x *= d
 
 	var torso_top: Vector2 = Vector2(body_lean, shoulder_y + body_y)
 	var torso_bottom: Vector2 = Vector2(-body_lean * 0.35, hip_y + body_y)
 	var head: Vector2 = Vector2(body_lean * 0.25, head_y + body_y)
 	var neck: Vector2 = Vector2(body_lean * 0.05, -19.0 + body_y)
-	var shoulder_l: Vector2 = torso_top + Vector2(-9.5, 1.0)
-	var shoulder_r: Vector2 = torso_top + Vector2(9.5, 1.0)
-	var hip_l: Vector2 = torso_bottom + Vector2(-6.5, 0.0)
-	var hip_r: Vector2 = torso_bottom + Vector2(6.5, 0.0)
+	var shoulder_l: Vector2 = torso_top + Vector2(-9.5 * d, 1.0)
+	var shoulder_r: Vector2 = torso_top + Vector2(9.5 * d, 1.0)
+	var hip_l: Vector2 = torso_bottom + Vector2(-6.5 * d, 0.0)
+	var hip_r: Vector2 = torso_bottom + Vector2(6.5 * d, 0.0)
 
-	left_knee.y += body_y
-	right_knee.y += body_y
-	left_ankle.y += body_y
-	right_ankle.y += body_y
-	left_foot.y += body_y
-	right_foot.y += body_y
-	left_elbow.y += body_y
-	right_elbow.y += body_y
-	left_hand.y += body_y
-	right_hand.y += body_y
+	# Hip-to-knee-to-foot chains read as actual articulated legs.
+	_draw_limb(hip_l, knee_l + Vector2(0.0, body_y), 7.0, pants, outline)
+	_draw_limb(knee_l + Vector2(0.0, body_y), foot_l + Vector2(0.0, body_y - 1.0), 6.0, pants, outline)
+	_draw_limb(hip_r, knee_r + Vector2(0.0, body_y), 7.0, pants, outline)
+	_draw_limb(knee_r + Vector2(0.0, body_y), foot_r + Vector2(0.0, body_y - 1.0), 6.0, pants, outline)
 
-	if d < 0.0:
-		left_knee.x *= -1.0
-		right_knee.x *= -1.0
-		left_ankle.x *= -1.0
-		right_ankle.x *= -1.0
-		left_foot.x *= -1.0
-		right_foot.x *= -1.0
-		left_elbow.x *= -1.0
-		right_elbow.x *= -1.0
-		left_hand.x *= -1.0
-		right_hand.x *= -1.0
+	# Counter-swinging arms with natural elbow arcs.
+	_draw_limb(shoulder_l, elbow_l + Vector2(0.0, body_y), 6.0, shirt, outline)
+	_draw_limb(elbow_l + Vector2(0.0, body_y), hand_l + Vector2(0.0, body_y), 4.8, skin, outline)
+	_draw_limb(shoulder_r, elbow_r + Vector2(0.0, body_y), 6.0, shirt, outline)
+	_draw_limb(elbow_r + Vector2(0.0, body_y), hand_r + Vector2(0.0, body_y), 4.8, skin, outline)
 
-	_draw_limb(hip_l, left_knee, 7.0, pants, outline)
-	_draw_limb(left_knee, left_ankle, 6.0, pants, outline)
-	_draw_limb(hip_r, right_knee, 7.0, pants, outline)
-	_draw_limb(right_knee, right_ankle, 6.0, pants, outline)
+	# Feet: short shoes instead of a second long limb, keeping contact readable.
+	_draw_foot(foot_l + Vector2(3.5 * d, body_y - 1.0), d, shoe, outline)
+	_draw_foot(foot_r + Vector2(3.5 * d, body_y - 1.0), d, shoe, outline)
 
-	_draw_limb(shoulder_l, left_elbow, 6.0, shirt, outline)
-	_draw_limb(left_elbow, left_hand, 4.8, skin, outline)
-	_draw_limb(shoulder_r, right_elbow, 6.0, shirt, outline)
-	_draw_limb(right_elbow, right_hand, 4.8, skin, outline)
-
-	# Feet are kept close to the ground and angled in the travel direction.
-	_draw_limb(left_ankle, left_foot + Vector2(4.0 * d, 0.0), 5.5, shoe, outline)
-	_draw_limb(right_ankle, right_foot + Vector2(4.0 * d, 0.0), 5.5, shoe, outline)
-
-	# Neck and torso.
 	_draw_limb(neck, head + Vector2(0.0, 8.0), 5.0, skin_shadow, outline)
+
+	# Torso with a subtle highlight for depth.
 	draw_line(torso_top, torso_bottom, outline, 19.0, true)
 	draw_line(torso_top, torso_bottom, shirt, 14.0, true)
-	draw_line(torso_top + Vector2(-3.0, 2.0), torso_bottom + Vector2(-1.0, -2.0), shirt_light, 3.0, true)
+	draw_line(torso_top + Vector2(-3.0 * d, 2.0), torso_bottom + Vector2(-1.0 * d, -2.0), shirt_light, 3.0, true)
 
-	# Head, face and tiny eye highlight.
+	# Head stays round and does not rotate with the walking cycle.
 	draw_circle(head, 12.5, outline)
 	draw_circle(head, 10.2, skin)
 	var eye: Vector2 = head + Vector2(4.2 * d, -1.3)
 	draw_circle(eye, 2.2, outline)
 	draw_circle(eye + Vector2(0.55 * d, -0.5), 0.65, Color.WHITE)
 
-	# Shoulder and knee joints give the stickman a cleaner silhouette.
+	# Joints make the cutout character feel assembled rather than drawn as sticks.
 	draw_circle(shoulder_l, 3.8, shirt)
 	draw_circle(shoulder_r, 3.8, shirt)
-	draw_circle(left_knee, 3.2, pants)
-	draw_circle(right_knee, 3.2, pants)
-
-func _apply_walk_pose(frame: int, left_knee: Vector2, right_knee: Vector2, left_ankle: Vector2, right_ankle: Vector2, left_foot: Vector2, right_foot: Vector2, left_elbow: Vector2, right_elbow: Vector2, left_hand: Vector2, right_hand: Vector2) -> void:
-	# 8 classic poses: Contact, Down, Passing, Up, then the mirrored four.
-	# Stride stays compact so the legs never fly apart.
-	match frame:
-		0:
-			left_knee.x = -9.0
-			left_ankle.x = -12.0
-			left_foot.x = -13.0
-			right_knee.x = 6.0
-			right_ankle.x = 4.0
-			right_foot.x = 4.0
-			left_elbow.x = -9.0
-			left_hand.x = -7.0
-			right_elbow.x = 15.0
-			right_hand.x = 17.0
-		1:
-			left_knee.x = -8.0
-			left_ankle.x = -10.0
-			left_foot.x = -11.0
-			right_knee.x = 5.0
-			right_ankle.x = 1.0
-			right_foot.x = 1.0
-			left_elbow.x = -10.0
-			left_hand.x = -9.0
-			right_elbow.x = 16.0
-			right_hand.x = 18.0
-		2:
-			left_knee.x = -4.0
-			left_ankle.x = -3.0
-			left_foot.x = -3.0
-			right_knee.x = 5.0
-			right_ankle.x = 6.0
-			right_foot.x = 6.0
-			left_elbow.x = -14.0
-			left_hand.x = -14.0
-			right_elbow.x = 13.0
-			right_hand.x = 13.0
-		3:
-			left_knee.x = 1.0
-			left_ankle.x = 5.0
-			left_foot.x = 6.0
-			right_knee.x = 4.0
-			right_ankle.x = 2.0
-			right_foot.x = 2.0
-			left_elbow.x = -16.0
-			left_hand.x = -18.0
-			right_elbow.x = 10.0
-			right_hand.x = 8.0
-		4:
-			left_knee.x = -6.0
-			left_ankle.x = -4.0
-			left_foot.x = -4.0
-			right_knee.x = 9.0
-			right_ankle.x = 12.0
-			right_foot.x = 13.0
-			left_elbow.x = -15.0
-			left_hand.x = -17.0
-			right_elbow.x = 9.0
-			right_hand.x = 7.0
-		5:
-			left_knee.x = -5.0
-			left_ankle.x = -1.0
-			left_foot.x = -1.0
-			right_knee.x = 8.0
-			right_ankle.x = 10.0
-			right_foot.x = 11.0
-			left_elbow.x = -16.0
-			left_hand.x = -18.0
-			right_elbow.x = 10.0
-			right_hand.x = 9.0
-		6:
-			left_knee.x = -5.0
-			left_ankle.x = -6.0
-			left_foot.x = -6.0
-			right_knee.x = 4.0
-			right_ankle.x = 3.0
-			right_foot.x = 3.0
-			left_elbow.x = -13.0
-			left_hand.x = -13.0
-			right_elbow.x = 14.0
-			right_hand.x = 14.0
-		7:
-			left_knee.x = -4.0
-			left_ankle.x = -2.0
-			left_foot.x = -2.0
-			right_knee.x = -1.0
-			right_ankle.x = -5.0
-			right_foot.x = -6.0
-			left_elbow.x = -10.0
-			left_hand.x = -8.0
-			right_elbow.x = 16.0
-			right_hand.x = 18.0
+	draw_circle(knee_l + Vector2(0.0, body_y), 3.1, pants)
+	draw_circle(knee_r + Vector2(0.0, body_y), 3.1, pants)
 
 func _draw_limb(a: Vector2, b: Vector2, width: float, fill_color: Color, outline_color: Color) -> void:
 	draw_line(a, b, outline_color, width + 3.0, true)
 	draw_line(a, b, fill_color, width, true)
+
+func _draw_foot(position: Vector2, direction: float, fill_color: Color, outline_color: Color) -> void:
+	var toe: Vector2 = position + Vector2(7.0 * direction, 0.0)
+	draw_line(position, toe, outline_color, 7.0, true)
+	draw_line(position, toe, fill_color, 4.0, true)
