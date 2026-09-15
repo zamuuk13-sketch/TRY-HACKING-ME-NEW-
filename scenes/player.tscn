@@ -1,7 +1,6 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource path="res://scripts/player.gd" type="Script" id="1_player"]
-[ext_resource path="res://imageens/stickman foda 3 sem fundo.png" type="Texture2D" id="2_stickman"]
 
 [sub_resource type="CapsuleShape2D" id="Capsule_player"]
 radius = 11.0
@@ -9,19 +8,6 @@ height = 64.0
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1_player")
-z_index = 1000
-
-[node name="StickmanSprite" type="Sprite2D" parent="."]
-texture = ExtResource("2_stickman")
-position = Vector2(0, -78)
-scale = Vector2(0.2, 0.2)
-z_index = 10
-z_as_relative = false
-visible = true
-modulate = Color(1, 1, 1, 1)
-self_modulate = Color(1, 1, 1, 1)
-texture_filter = 1
-centered = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 2)
