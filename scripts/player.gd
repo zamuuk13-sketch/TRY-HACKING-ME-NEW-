@@ -15,7 +15,7 @@ extends CharacterBody2D
 
 @export_category("Animation")
 @export var animation_fps: float = 12.0
-@export var animation_frames: int = 12
+@export var animation_frames: int = 8
 
 var facing_direction := 1.0
 var is_sprinting := false
@@ -24,6 +24,7 @@ var animation_time := 0.0
 var animation_frame := 0
 var animation_state := "idle"
 var landing_punch := 0.0
+var idle_time := 0.0
 
 func _ready() -> void:
 	visible = true
@@ -76,10 +77,18 @@ func _update_animation(delta: float) -> void:
 		animation_state = next_state
 		animation_time = 0.0
 		animation_frame = 0
+		if next_state == "idle":
+			idle_time = 0.0
 	else:
 		animation_time += delta
-		if animation_time >= 1.0 / maxf(animation_fps, 1.0):
-			animation_time -= 1.0 / maxf(animation_fps, 1.0)
+
+	if animation_state == "idle":
+		idle_time += delta
+		animation_frame = 0
+	else:
+		var frame_duration := 1.0 / maxf(animation_fps, 1.0)
+		while animation_time >= frame_duration:
+			animation_time -= frame_duration
 			animation_frame = (animation_frame + 1) % max(animation_frames, 1)
 
 func _limb(a: Vector2, b: Vector2, width: float, outer: Color, inner: Color) -> void:
@@ -112,8 +121,7 @@ func _draw() -> void:
 	var d := facing_direction
 	var speed_ratio: float = clampf(abs(velocity.x) / maxf(sprint_speed, 1.0), 0.0, 1.0)
 	var t := animation_time
-	var cycle := (float(animation_frame) + t * animation_fps) / float(max(animation_frames, 1))
-	var phase := cycle * TAU
+	var idle_t := idle_time
 
 	var head := Vector2(0.0, -31.0)
 	var neck := Vector2(0.0, -18.5)
@@ -132,48 +140,56 @@ func _draw() -> void:
 	var torso_lean := 0.0
 	var body_y := 0.0
 
-	# IDLE: subtle breathing and weight shift.
+	# IDLE: independent, slow breathing clock. It is deliberately not tied to walk frame timing.
 	if animation_state == "idle":
-		var breath := sin(t * TAU * 0.85)
-		var sway := sin(t * TAU * 0.42)
-		body_y = breath * 0.55
-		head = Vector2(sway * 0.7, -31.0 + body_y)
-		neck = Vector2(sway * 0.35, -18.4 + body_y * 0.6)
-		shoulder_l = Vector2(-10.0 + sway * 0.4, -15.2 + body_y)
-		shoulder_r = Vector2(10.0 + sway * 0.4, -15.2 + body_y)
-		elbow_l = Vector2(-13.0 - sway * 0.7, 0.5 + breath * 0.8)
-		elbow_r = Vector2(13.0 - sway * 0.5, 1.0 - breath * 0.6)
-		hand_l = Vector2(-12.0 - sway, 11.0 + breath * 0.5)
-		hand_r = Vector2(12.0 - sway * 0.7, 11.5 - breath * 0.4)
+		var breath := sin(idle_t * TAU * 0.55)
+		var sway := sin(idle_t * TAU * 0.22)
+		body_y = breath * 0.35
+		head = Vector2(sway * 0.35, -31.0 + body_y)
+		neck = Vector2(sway * 0.18, -18.45 + body_y * 0.6)
+		shoulder_l = Vector2(-10.0 + sway * 0.22, -15.1 + body_y)
+		shoulder_r = Vector2(10.0 + sway * 0.22, -15.1 + body_y)
+		elbow_l = Vector2(-13.0 - sway * 0.35, 0.4 + breath * 0.45)
+		elbow_r = Vector2(13.0 - sway * 0.25, 0.8 - breath * 0.35)
+		hand_l = Vector2(-12.0 - sway * 0.45, 11.0 + breath * 0.25)
+		hand_r = Vector2(12.0 - sway * 0.35, 11.4 - breath * 0.2)
 
-	# WALK: contact -> down -> passing -> up. Feet remain near a fixed ground line.
+	# WALK: exact 8-pose cycle. Contact / Down / Passing / Up, mirrored for the other leg.
+	# Stride is intentionally compact so the legs never swing unnaturally wide.
 	elif animation_state == "walk":
-		var w := phase
-		var s := sin(w)
-		var c := cos(w)
-		var stride := 8.5
-		var lift := maxf(0.0, c)
-		var down := maxf(0.0, -c)
-		body_y = down * 1.35 - lift * 0.35
-		head = Vector2(-s * 0.9, -31.0 + body_y)
-		neck = Vector2(-s * 0.45, -18.4 + body_y)
-		shoulder_l = Vector2(-10.0 - s * 0.45, -15.0 + body_y)
-		shoulder_r = Vector2(10.0 - s * 0.45, -15.0 + body_y)
-		# Arms oppose the legs.
-		elbow_l = Vector2(-13.0 - s * 6.0, -0.5 + c * 1.8)
-		elbow_r = Vector2(13.0 + s * 6.0, -0.5 - c * 1.8)
-		hand_l = Vector2(-13.0 - s * 7.0, 10.5 + c * 1.5)
-		hand_r = Vector2(13.0 + s * 7.0, 10.5 - c * 1.5)
-		# Long contact stride, tucked passing step.
-		knee_l = Vector2(-7.0 - s * stride, 30.5 - lift * 2.0)
-		knee_r = Vector2(7.0 + s * stride, 30.5 - lift * 2.0)
-		ankle_l = Vector2(-7.0 - s * stride * 1.28, 49.0 - lift * 2.2)
-		ankle_r = Vector2(7.0 + s * stride * 1.28, 49.0 - lift * 2.2)
-		torso_lean = -s * 0.9
+		var frame := animation_frame % 8
+		var body_offsets := [0.0, 1.7, -0.55, -1.15, 0.0, 1.7, -0.55, -1.15]
+		var foot_l_x := [9.0, 6.5, -1.0, -5.5, -9.0, -6.5, 1.0, 5.5]
+		var foot_r_x := [-9.0, -5.0, 1.0, 6.0, 9.0, 5.0, -1.0, -6.0]
+		var knee_l_x := [7.0, 4.0, -1.5, -4.0, -7.0, -4.0, 1.5, 4.0]
+		var knee_r_x := [-7.0, -4.0, 1.5, 4.0, 7.0, 4.0, -1.5, -4.0]
+		var ankle_l_y := [49.0, 49.0, 48.0, 47.8, 49.0, 49.0, 48.0, 47.8]
+		var ankle_r_y := [49.0, 49.0, 48.0, 47.8, 49.0, 49.0, 48.0, 47.8]
+		body_y = body_offsets[frame]
 
-	# RUN: larger stride, forward lean, powerful arm drive and airborne phase.
+		# The body/hip stays centered; only the pose shifts around it.
+		head = Vector2(0.25 if frame < 4 else -0.25, -31.0 + body_y)
+		neck = Vector2(0.12 if frame < 4 else -0.12, -18.4 + body_y)
+		shoulder_l = Vector2(-10.0, -15.0 + body_y)
+		shoulder_r = Vector2(10.0, -15.0 + body_y)
+
+		# Arms counter the legs. Their swing is modest, not a huge windmill.
+		var arm_swing := [6.0, 7.0, 3.0, 5.0, -6.0, -7.0, -3.0, -5.0][frame]
+		var arm_l_y := [-1.0, -0.2, 1.0, 0.1, 1.0, -0.2, -1.0, 0.1][frame]
+		elbow_l = Vector2(-13.0 - arm_swing, arm_l_y)
+		elbow_r = Vector2(13.0 + arm_swing, -arm_l_y * 0.8)
+		hand_l = Vector2(-13.0 - arm_swing * 1.12, 10.5 + arm_l_y * 0.65)
+		hand_r = Vector2(13.0 + arm_swing * 1.12, 10.5 - arm_l_y * 0.55)
+
+		knee_l = Vector2(knee_l_x[frame], 30.5 + body_y * 0.25)
+		knee_r = Vector2(knee_r_x[frame], 30.5 + body_y * 0.25)
+		ankle_l = Vector2(foot_l_x[frame], ankle_l_y[frame])
+		ankle_r = Vector2(foot_r_x[frame], ankle_r_y[frame])
+		torso_lean = [0.6, 0.9, 0.2, -0.5, -0.6, -0.9, -0.2, 0.5][frame]
+
+	# RUN: unchanged for now; walk is the only locomotion cycle being tuned.
 	elif animation_state == "run":
-		var r := phase * 1.18
+		var r := (float(animation_frame) + t * animation_fps) / float(max(animation_frames, 1)) * TAU * 1.18
 		var s := sin(r)
 		var c := cos(r)
 		var flight := maxf(0.0, -c)
@@ -193,7 +209,7 @@ func _draw() -> void:
 		ankle_r = Vector2(8.0 + s * 15.0, 48.5 - maxf(-s, 0.0) * 7.0 + flight * 4.5)
 		torso_lean = -5.0 - speed_ratio * 2.0
 
-	# JUMP: compact takeoff silhouette with raised arms and tucked legs.
+	# JUMP: unchanged for now.
 	elif animation_state == "jump":
 		var j: float = clampf(-velocity.y / maxf(jump_power, 1.0), 0.0, 1.0)
 		head = Vector2(0.0, -32.0 - j * 0.6)
@@ -210,7 +226,7 @@ func _draw() -> void:
 		ankle_r = Vector2(16.0 + j * 6.0, 41.0 - j * 2.0)
 		torso_lean = -1.5
 
-	# FALL: loosened arms and knees preparing for impact.
+	# FALL: unchanged for now.
 	elif animation_state == "fall":
 		var fall_ratio: float = clampf(velocity.y / maxf(max_fall_speed, 1.0), 0.0, 1.0)
 		head = Vector2(0.5 * d, -30.5 + fall_ratio * 0.5)
@@ -225,7 +241,7 @@ func _draw() -> void:
 		ankle_r = Vector2(14.0 + fall_ratio * 3.0, 48.0)
 		torso_lean = 1.5 + fall_ratio * 2.0
 
-	# CROUCH: compressed body, forward knees and lowered head.
+	# CROUCH: unchanged for now.
 	elif animation_state == "crouch":
 		var q := sin(t * TAU * 0.75)
 		head = Vector2(1.0 * d, -21.0 + q * 0.35)
@@ -244,13 +260,11 @@ func _draw() -> void:
 		ankle_r = Vector2(10.0, 43.5)
 		torso_lean = 3.5
 
-	# Landing squash is purely visual; physics are untouched.
 	var squash := landing_punch
 	body_y += squash * 1.2
 	head.y += squash * 2.0
 	torso_lean += squash * 0.8
 
-	# Mirror the complete pose for left movement.
 	if d < 0.0:
 		head.x *= -1.0
 		neck.x *= -1.0
@@ -287,7 +301,6 @@ func _draw() -> void:
 	var torso_bottom := Vector2(torso_lean * 0.42, 15.0)
 	var torso_width := 15.5 if animation_state != "crouch" else 16.5
 
-	# Rear leg and rear arm first.
 	_limb(hip_l, knee_l, 7.0, outline, pants)
 	_limb(knee_l, ankle_l, 6.0, outline, pants)
 	_joint(knee_l, 4.2, outline, pants)
@@ -298,13 +311,11 @@ func _draw() -> void:
 	_joint(elbow_l, 3.0, outline, shirt)
 	_joint(hand_l, 3.3, outline, skin)
 
-	# Torso.
 	_limb(torso_top, torso_bottom, torso_width, outline, shirt)
 	_limb(Vector2(torso_lean - 4.0, -10.5), Vector2(torso_lean - 1.5, 9.0), 3.0, shirt_light, shirt_light)
 	draw_line(Vector2(torso_lean - 5.0, 7.0), Vector2(torso_lean + 5.0, 7.0), shirt_light, 2.0, true)
 	draw_circle(Vector2(torso_lean + 4.0 * d, -4.0), 1.8, accent)
 
-	# Front leg and arm.
 	_limb(hip_r, knee_r, 7.0, outline, pants)
 	_limb(knee_r, ankle_r, 6.0, outline, pants)
 	_joint(knee_r, 4.2, outline, pants)
@@ -315,13 +326,11 @@ func _draw() -> void:
 	_joint(elbow_r, 3.0, outline, shirt)
 	_joint(hand_r, 3.3, outline, skin)
 
-	# Neck and head.
 	_limb(neck, head + Vector2(0.0, 7.0), 5.0, outline, skin_shadow)
 	draw_circle(head, 12.0, outline)
 	draw_circle(head + Vector2(0.0, 0.5), 9.7, skin)
 	draw_arc(head + Vector2(-0.5, 0.5), 8.7, 0.25, 2.5, 14, skin_shadow, 1.7, true)
 
-	# Face direction and expression.
 	var face_x := 4.0 * d
 	var eye_y := head.y - 1.0
 	draw_circle(Vector2(head.x + face_x, eye_y), 2.0, eye)
@@ -331,14 +340,12 @@ func _draw() -> void:
 	elif animation_state == "crouch":
 		draw_line(Vector2(head.x + face_x - 1.0 * d, eye_y + 3.5), Vector2(head.x + face_x + 1.5 * d, eye_y + 3.5), outline, 1.2, true)
 
-	# Hair/hood-like head outline and sprint accent.
 	draw_arc(head + Vector2(0.0, -1.5), 10.0, PI + 0.2, TAU - 0.2, 16, outline, 2.0, true)
 	if animation_state == "run" and speed_ratio > 0.75:
 		var trail_x := head.x - d * 15.0
 		draw_line(Vector2(trail_x, head.y - 4.0), Vector2(trail_x - d * 7.0, head.y - 5.0), accent, 1.5, true)
 		draw_line(Vector2(trail_x, head.y + 1.0), Vector2(trail_x - d * 5.0, head.y + 1.0), accent, 1.2, true)
 
-	# Soft grounded shadow.
 	var shadow_scale := 1.0 + landing_punch * 0.35
 	var shadow_width := 22.0 * shadow_scale
 	var shadow_points := PackedVector2Array()
