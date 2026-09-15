@@ -1,6 +1,6 @@
 extends CharacterBody2D
-## TRY HACKING ME NOW — animated Player controller
-## 12-frame procedural animation with compact, natural stickman poses.
+## TRY HACKING ME NOW — Player controller with modular PNG character.
+## The Player remains the invisible gameplay body; Visual contains the PNG parts.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -13,18 +13,35 @@ extends CharacterBody2D
 
 @export_category("Animation")
 @export var animation_fps: float = 12.0
-@export var animation_frames: int = 12
+
+@onready var visual: Node2D = $Visual
+@onready var head: Sprite2D = $Visual/Head
+@onready var torso: Sprite2D = $Visual/Torso
+@onready var arm_right: Sprite2D = $Visual/ArmRight
+@onready var arm_left: Sprite2D = $Visual/ArmLeft
+@onready var leg_right: Sprite2D = $Visual/LegRight
+@onready var leg_left: Sprite2D = $Visual/LegLeft
 
 var facing_direction := 1.0
 var is_sprinting := false
 var is_crouching := false
 var animation_time := 0.0
-var animation_frame := 0
-var animation_state := "idle"
 
 func _ready() -> void:
+	# Gameplay body stays invisible; only the modular PNG Visual is rendered.
 	z_index = 100
-	queue_redraw()
+	# Keep all visual parts together under one cheap Node2D transform.
+	visual.visible = true
+	visual.z_index = 100
+	# Initial compact stickman layout.
+	head.position = Vector2(0, -30)
+	torso.position = Vector2(0, -1)
+	arm_right.position = Vector2(12, -8)
+	arm_left.position = Vector2(-12, -8)
+	leg_right.position = Vector2(7, 27)
+	leg_left.position = Vector2(-7, 27)
+	for part in [head, torso, arm_right, arm_left, leg_right, leg_left]:
+		part.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 func _physics_process(delta: float) -> void:
 	var input_axis := Input.get_axis("move_left", "move_right")
@@ -50,112 +67,69 @@ func _physics_process(delta: float) -> void:
 			velocity.y = -jump_power
 
 	move_and_slide()
-	_update_animation(delta)
-	queue_redraw()
+	_update_png_animation(delta)
 
-func _update_animation(delta: float) -> void:
-	var next_state := "idle"
+func _update_png_animation(delta: float) -> void:
+	animation_time += delta
+	var moving := abs(velocity.x) > 15.0 and is_on_floor()
+	var phase := animation_time * (10.0 if is_sprinting else animation_fps)
+	var swing := sin(phase) if moving else sin(animation_time * 2.0) * 0.15
+	var opposite := -swing
+
+	# Flip the complete visual without touching the gameplay body.
+	visual.scale.x = facing_direction
+
+	if is_crouching:
+		visual.position.y = 9.0
+		head.position = Vector2(0, -21)
+		torso.position = Vector2(0, 5)
+		arm_right.position = Vector2(12, 0)
+		arm_left.position = Vector2(-12, 0)
+		leg_right.position = Vector2(8, 24)
+		leg_left.position = Vector2(-8, 24)
+		arm_right.rotation = -0.15
+		arm_left.rotation = 0.15
+		leg_right.rotation = -0.12
+		leg_left.rotation = 0.12
+		return
+
+	visual.position.y = 0.0
+
 	if not is_on_floor():
-		next_state = "jump" if velocity.y < 0.0 else "fall"
-	elif is_crouching:
-		next_state = "crouch"
-	elif abs(velocity.x) > 15.0:
-		next_state = "run" if is_sprinting else "walk"
+		# Compact airborne pose.
+		head.position = Vector2(0, -32)
+		torso.position = Vector2(0, -2)
+		arm_right.position = Vector2(13, -10)
+		arm_left.position = Vector2(-13, -10)
+		leg_right.position = Vector2(8, 27)
+		leg_left.position = Vector2(-8, 27)
+		arm_right.rotation = -0.25
+		arm_left.rotation = 0.25
+		leg_right.rotation = 0.12
+		leg_left.rotation = -0.12
+		return
 
-	if next_state != animation_state:
-		animation_state = next_state
-		animation_time = 0.0
-		animation_frame = 0
+	# Base pose.
+	head.position = Vector2(0, -30 + (sin(animation_time * 4.0) * 0.6 if not moving else 0.0))
+	torso.position = Vector2(0, -1)
+
+	if moving:
+		# Lightweight limb animation: only Sprite2D transforms are changed.
+		arm_right.position = Vector2(12, -8)
+		arm_left.position = Vector2(-12, -8)
+		leg_right.position = Vector2(7, 27)
+		leg_left.position = Vector2(-7, 27)
+		arm_right.rotation = swing * 0.45
+		arm_left.rotation = opposite * 0.45
+		leg_right.rotation = opposite * 0.32
+		leg_left.rotation = swing * 0.32
+		visual.position.y = abs(swing) * 0.8
 	else:
-		animation_time += delta
-		if animation_time >= 1.0 / animation_fps:
-			animation_time = 0.0
-			animation_frame = (animation_frame + 1) % animation_frames
-
-func _draw() -> void:
-	var body := Color(0.96, 0.96, 0.96, 1.0)
-	var outline := Color(0.04, 0.04, 0.04, 1.0)
-	var accent := Color(0.91, 0.71, 0.29, 1.0)
-	var f := animation_frame
-	var phase := float(f) / float(animation_frames)
-	var d := facing_direction
-
-	# 12-frame smooth cycle with restrained limb movement.
-	var walk_phase := phase * TAU
-	var stride := sin(walk_phase)
-	var opposite := sin(walk_phase + PI)
-	var bob := sin(walk_phase * 2.0) * 1.0
-
-	var head_y := -30.0 + bob
-	var shoulder_y := -17.0 + bob
-	var hip_y := 17.0
-	var arm_a := Vector2(12.0 + stride * 5.0, 5.0 + opposite * 2.0)
-	var arm_b := Vector2(-12.0 + opposite * 5.0, 5.0 + stride * 2.0)
-	var leg_a := Vector2(7.0 + opposite * 7.0, 40.0)
-	var leg_b := Vector2(-7.0 + stride * 7.0, 40.0)
-
-	match animation_state:
-		"idle":
-			var idle := sin(phase * TAU)
-			head_y = -30.0 + idle * 0.7
-			shoulder_y = -17.0 + idle * 0.7
-			arm_a = Vector2(11.0, 5.0 + idle)
-			arm_b = Vector2(-11.0, 5.0 - idle)
-			leg_a = Vector2(6.0, 40.0)
-			leg_b = Vector2(-6.0, 40.0)
-		"walk":
-			# Arms and legs stay close to the torso for a natural walk.
-			arm_a = Vector2(12.0 + stride * 6.0, 5.0 + opposite * 2.0)
-			arm_b = Vector2(-12.0 + opposite * 6.0, 5.0 + stride * 2.0)
-			leg_a = Vector2(7.0 + opposite * 8.0, 40.0 - abs(stride) * 1.5)
-			leg_b = Vector2(-7.0 + stride * 8.0, 40.0 - abs(opposite) * 1.5)
-		"run":
-			var run_phase := phase * TAU * 1.2
-			var rs := sin(run_phase)
-			var ro := sin(run_phase + PI)
-			bob = sin(run_phase * 2.0) * 1.5
-			head_y = -30.5 + bob
-			shoulder_y = -17.5 + bob
-			arm_a = Vector2(15.0 + rs * 8.0, 2.0 + ro * 4.0)
-			arm_b = Vector2(-15.0 + ro * 8.0, 6.0 + rs * 4.0)
-			leg_a = Vector2(8.0 + ro * 11.0, 40.0 - abs(rs) * 3.0)
-			leg_b = Vector2(-8.0 + rs * 11.0, 40.0 - abs(ro) * 3.0)
-		"jump":
-			var jump_phase := sin(phase * TAU)
-			head_y = -31.0 + jump_phase * 0.8
-			arm_a = Vector2(11.0 + jump_phase * 3.0, -10.0)
-			arm_b = Vector2(-11.0 - jump_phase * 3.0, -9.0)
-			leg_a = Vector2(8.0, 30.0)
-			leg_b = Vector2(-8.0, 30.0)
-		"fall":
-			arm_a = Vector2(14.0, 5.0)
-			arm_b = Vector2(-14.0, 5.0)
-			leg_a = Vector2(10.0, 40.0)
-			leg_b = Vector2(-10.0, 40.0)
-		"crouch":
-			var crouch_phase := sin(phase * TAU)
-			head_y = -19.0 + crouch_phase * 0.5
-			shoulder_y = -8.0 + crouch_phase * 0.5
-			hip_y = 14.0
-			arm_a = Vector2(13.0, 9.0)
-			arm_b = Vector2(-13.0, 10.0)
-			leg_a = Vector2(10.0 + crouch_phase * 2.0, 28.0)
-			leg_b = Vector2(-10.0 - crouch_phase * 2.0, 28.0)
-
-	arm_a.x *= d
-	arm_b.x *= d
-	leg_a.x *= d
-	leg_b.x *= d
-
-	# Clean, compact silhouette — no exaggerated X-shaped limbs.
-	draw_circle(Vector2(0, head_y), 14.0, outline)
-	draw_circle(Vector2(0, head_y), 10.5, body)
-	draw_line(Vector2(0, shoulder_y), Vector2(0, hip_y), outline, 7.0, true)
-	draw_line(Vector2(0, shoulder_y + 2.0), arm_a, outline, 5.5, true)
-	draw_line(Vector2(0, shoulder_y + 2.0), arm_b, outline, 5.5, true)
-	draw_line(Vector2(0, hip_y), leg_a, outline, 6.0, true)
-	draw_line(Vector2(0, hip_y), leg_b, outline, 6.0, true)
-	draw_circle(Vector2(4.0 * d, head_y - 1.0), 2.0, outline)
-
-	if is_sprinting:
-		draw_line(Vector2(-6, -43), Vector2(6, -43), accent, 3.0, true)
+		arm_right.position = Vector2(12, -8)
+		arm_left.position = Vector2(-12, -8)
+		leg_right.position = Vector2(7, 27)
+		leg_left.position = Vector2(-7, 27)
+		arm_right.rotation = 0.0
+		arm_left.rotation = 0.0
+		leg_right.rotation = 0.0
+		leg_left.rotation = 0.0
