@@ -1,7 +1,7 @@
 extends CharacterBody2D
-## TRY HACKING ME NOW — procedural 2D character.
-## The player is drawn as a small cutout-style rig and the walk is built from
-## explicit animation keyframes with interpolation between them.
+## TRY HACKING ME NOW — lightweight 2D cutout character with authored keyframe walk.
+## Movement/physics stay on CharacterBody2D. Visual animation is a real
+## transform hierarchy driven by AnimationPlayer keyframes.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -13,60 +13,45 @@ extends CharacterBody2D
 @export var max_fall_speed: float = 1100.0
 
 @export_category("Animation")
-@export var animation_fps: float = 12.0
-@export var animation_frames: int = 8
+@export var walk_cycle_fps: float = 12.0
 
 var facing_direction: float = 1.0
 var is_sprinting: bool = false
 var is_crouching: bool = false
-var animation_time: float = 0.0
-var animation_frame: int = 0
 var animation_state: String = "idle"
-var idle_time: float = 0.0
 var landing_punch: float = 0.0
 
-# Explicit walk keyframes. Every entry is a complete pose for the right-facing
-# character. The renderer mirrors the finished pose as one unit when facing left.
-# 0 Contact, 1 Down, 2 Passing, 3 Up, 4 Contact opposite, 5 Down, 6 Passing, 7 Up.
-var walk_knees_l: Array[Vector2] = [
-	Vector2(-9.0, 31.0), Vector2(-8.0, 32.0), Vector2(-4.0, 30.0), Vector2(1.0, 29.0),
-	Vector2(8.0, 31.0), Vector2(7.0, 32.0), Vector2(4.0, 30.0), Vector2(-1.0, 29.0)
-]
-var walk_knees_r: Array[Vector2] = [
-	Vector2(7.0, 30.0), Vector2(6.0, 31.0), Vector2(5.0, 30.0), Vector2(4.0, 29.0),
-	Vector2(-8.0, 31.0), Vector2(-7.0, 32.0), Vector2(-4.0, 30.0), Vector2(1.0, 29.0)
-]
-var walk_feet_l: Array[Vector2] = [
-	Vector2(-13.0, 52.0), Vector2(-11.0, 52.0), Vector2(-3.0, 51.0), Vector2(5.0, 50.0),
-	Vector2(4.0, 52.0), Vector2(2.0, 52.0), Vector2(-5.0, 51.0), Vector2(-8.0, 50.0)
-]
-var walk_feet_r: Array[Vector2] = [
-	Vector2(4.0, 52.0), Vector2(1.0, 52.0), Vector2(6.0, 51.0), Vector2(7.0, 50.0),
-	Vector2(13.0, 52.0), Vector2(11.0, 52.0), Vector2(3.0, 51.0), Vector2(-5.0, 50.0)
-]
-var walk_elbows_l: Array[Vector2] = [
-	Vector2(-12.0, -1.0), Vector2(-13.0, 1.0), Vector2(-15.0, 0.0), Vector2(-16.0, -3.0),
-	Vector2(-9.0, -2.0), Vector2(-10.0, 0.0), Vector2(-13.0, 0.0), Vector2(-15.0, -2.0)
-]
-var walk_elbows_r: Array[Vector2] = [
-	Vector2(14.0, -2.0), Vector2(15.0, 0.0), Vector2(13.0, 0.0), Vector2(10.0, -2.0),
-	Vector2(16.0, -3.0), Vector2(15.0, -1.0), Vector2(13.0, 0.0), Vector2(11.0, -2.0)
-]
-var walk_hands_l: Array[Vector2] = [
-	Vector2(-14.0, 12.0), Vector2(-15.0, 14.0), Vector2(-15.0, 11.0), Vector2(-17.0, 7.0),
-	Vector2(-7.0, 8.0), Vector2(-8.0, 10.0), Vector2(-12.0, 10.0), Vector2(-16.0, 8.0)
-]
-var walk_hands_r: Array[Vector2] = [
-	Vector2(16.0, 9.0), Vector2(17.0, 11.0), Vector2(13.0, 11.0), Vector2(9.0, 7.0),
-	Vector2(18.0, 8.0), Vector2(17.0, 10.0), Vector2(14.0, 11.0), Vector2(10.0, 8.0)
-]
+var rig: Node2D
+var animation_player: AnimationPlayer
+var visual_root: Node2D
+var head: Node2D
+var torso: Line2D
+var torso_highlight: Line2D
+var left_upper_arm: Node2D
+var left_forearm: Node2D
+var right_upper_arm: Node2D
+var right_forearm: Node2D
+var left_thigh: Node2D
+var left_shin: Node2D
+var right_thigh: Node2D
+var right_shin: Node2D
+
+const OUTLINE := Color(0.025, 0.028, 0.035, 1.0)
+const SHIRT := Color(0.12, 0.15, 0.19, 1.0)
+const SHIRT_LIGHT := Color(0.20, 0.24, 0.29, 1.0)
+const PANTS := Color(0.065, 0.075, 0.095, 1.0)
+const SKIN := Color(0.96, 0.96, 0.96, 1.0)
+const SKIN_SHADOW := Color(0.70, 0.72, 0.76, 1.0)
+const SHOE := Color(0.02, 0.022, 0.028, 1.0)
 
 func _ready() -> void:
 	visible = true
 	modulate = Color.WHITE
 	self_modulate = Color.WHITE
 	z_index = 100
-	queue_redraw()
+	_build_rig()
+	_build_animations()
+	_play_state("idle")
 
 func _physics_process(delta: float) -> void:
 	var input_axis: float = Input.get_axis("move_left", "move_right")
@@ -97,10 +82,10 @@ func _physics_process(delta: float) -> void:
 	if not was_on_floor and is_on_floor():
 		landing_punch = 1.0
 	landing_punch = move_toward(landing_punch, 0.0, delta * 7.0)
-	_update_animation(delta)
-	queue_redraw()
+	_update_animation_state()
+	_update_facing()
 
-func _update_animation(delta: float) -> void:
+func _update_animation_state() -> void:
 	var next_state: String = "idle"
 	if not is_on_floor():
 		next_state = "jump" if velocity.y < 0.0 else "fall"
@@ -110,152 +95,193 @@ func _update_animation(delta: float) -> void:
 		next_state = "run" if is_sprinting else "walk"
 
 	if next_state != animation_state:
-		animation_state = next_state
-		animation_time = 0.0
-		animation_frame = 0
-		if next_state == "idle":
-			idle_time = 0.0
-	else:
-		if next_state == "idle":
-			idle_time += delta
-		else:
-			animation_time += delta
-			var frame_duration: float = 1.0 / maxf(animation_fps, 1.0)
-			while animation_time >= frame_duration:
-				animation_time -= frame_duration
-				animation_frame = (animation_frame + 1) % animation_frames
+		_play_state(next_state)
 
-func _walk_pose_pair() -> Array[Vector2]:
-	var next_frame: int = (animation_frame + 1) % animation_frames
-	var duration: float = 1.0 / maxf(animation_fps, 1.0)
-	var blend: float = clampf(animation_time / duration, 0.0, 1.0)
-	# Smoothstep gives soft acceleration/deceleration between authored keys.
-	blend = blend * blend * (3.0 - 2.0 * blend)
-	return [Vector2(blend, 0.0), Vector2(float(next_frame), 0.0)]
+func _update_facing() -> void:
+	if visual_root == null:
+		return
+	visual_root.scale.x = abs(visual_root.scale.x) * facing_direction
 
-func _lerp_pose(values: Array[Vector2], frame: int, blend: float) -> Vector2:
-	var next_frame: int = (frame + 1) % animation_frames
-	return values[frame].lerp(values[next_frame], blend)
+func _play_state(state: String) -> void:
+	animation_state = state
+	if animation_player == null:
+		return
+	var clip: String = state
+	if not animation_player.has_animation(clip):
+		clip = "idle"
+	animation_player.play(clip, 0.10)
+	animation_player.speed_scale = 1.0
+	if state == "run":
+		animation_player.speed_scale = 1.35
 
-func _draw() -> void:
-	var skin: Color = Color(0.96, 0.96, 0.96, 1.0)
-	var skin_shadow: Color = Color(0.70, 0.72, 0.76, 1.0)
-	var outline: Color = Color(0.025, 0.028, 0.035, 1.0)
-	var shirt: Color = Color(0.12, 0.15, 0.19, 1.0)
-	var shirt_light: Color = Color(0.20, 0.24, 0.29, 1.0)
-	var pants: Color = Color(0.065, 0.075, 0.095, 1.0)
-	var shoe: Color = Color(0.02, 0.022, 0.028, 1.0)
+func _build_rig() -> void:
+	rig = Node2D.new()
+	rig.name = "Rig"
+	add_child(rig)
 
-	var d: float = facing_direction
-	var body_y: float = 0.0
-	var body_lean: float = 0.0
-	var head_y: float = -31.0
-	var shoulder_y: float = -14.0
-	var hip_y: float = 16.0
+	visual_root = Node2D.new()
+	visual_root.name = "VisualRoot"
+	rig.add_child(visual_root)
 
-	var knee_l: Vector2 = Vector2(-7.0, 31.0)
-	var knee_r: Vector2 = Vector2(7.0, 31.0)
-	var foot_l: Vector2 = Vector2(-7.0, 52.0)
-	var foot_r: Vector2 = Vector2(7.0, 52.0)
-	var elbow_l: Vector2 = Vector2(-13.0, -1.0)
-	var elbow_r: Vector2 = Vector2(13.0, -1.0)
-	var hand_l: Vector2 = Vector2(-14.0, 11.0)
-	var hand_r: Vector2 = Vector2(14.0, 11.0)
+	# Torso.
+	torso = _line("Torso", visual_root, 19.0, OUTLINE)
+	torso.points = PackedVector2Array([Vector2(0, -14), Vector2(0, 17)])
+	var shirt_line: Line2D = _line("Shirt", visual_root, 14.0, SHIRT)
+	shirt_line.points = PackedVector2Array([Vector2(0, -14), Vector2(0, 17)])
+	torso_highlight = _line("TorsoHighlight", visual_root, 3.0, SHIRT_LIGHT)
+	torso_highlight.points = PackedVector2Array([Vector2(-3, -11), Vector2(-1, 13)])
 
-	if animation_state == "walk":
-		var frame_duration: float = 1.0 / maxf(animation_fps, 1.0)
-		var blend: float = clampf(animation_time / frame_duration, 0.0, 1.0)
-		blend = blend * blend * (3.0 - 2.0 * blend)
-		knee_l = _lerp_pose(walk_knees_l, animation_frame, blend)
-		knee_r = _lerp_pose(walk_knees_r, animation_frame, blend)
-		foot_l = _lerp_pose(walk_feet_l, animation_frame, blend)
-		foot_r = _lerp_pose(walk_feet_r, animation_frame, blend)
-		elbow_l = _lerp_pose(walk_elbows_l, animation_frame, blend)
-		elbow_r = _lerp_pose(walk_elbows_r, animation_frame, blend)
-		hand_l = _lerp_pose(walk_hands_l, animation_frame, blend)
-		hand_r = _lerp_pose(walk_hands_r, animation_frame, blend)
-		var cycle_phase: float = (float(animation_frame) + blend) / 8.0
-		body_y = sin(cycle_phase * TAU) * 1.35
-		body_lean = 0.9 * d
-	else:
-		var breath: float = sin(idle_time * TAU * 0.85)
-		body_y = breath * 0.45
-		if animation_state == "run":
-			body_y = -1.0
-			body_lean = 2.0 * d
-		elif animation_state == "crouch":
-			body_y = 9.0
-			head_y = -22.0
-			shoulder_y = -7.0
-			hip_y = 20.0
-		elif animation_state == "jump":
-			body_y = -2.0
-			body_lean = 2.0 * d
-		elif animation_state == "fall":
-			body_y = 2.0
-			body_lean = -1.5 * d
+	# Head.
+	head = Node2D.new()
+	head.name = "Head"
+	head.position = Vector2(0, -31)
+	visual_root.add_child(head)
+	_circle("HeadOutline", head, 12.5, OUTLINE)
+	_circle("HeadFill", head, 10.2, SKIN)
+	var neck_line: Line2D = _line("Neck", visual_root, 5.0, SKIN_SHADOW)
+	neck_line.points = PackedVector2Array([Vector2(0, -20), Vector2(0, -23)])
+	var eye: Polygon2D = _circle("Eye", head, 2.2, OUTLINE)
+	eye.position = Vector2(4.2, -1.3)
+	var eye_glint: Polygon2D = _circle("EyeGlint", head, 0.65, Color.WHITE)
+	eye_glint.position = Vector2(4.75, -1.8)
 
-	# The entire rig is mirrored as a single coordinate system. This prevents
-	# the old left-facing deformation where individual limbs were flipped twice.
-	knee_l.x *= d
-	knee_r.x *= d
-	foot_l.x *= d
-	foot_r.x *= d
-	elbow_l.x *= d
-	elbow_r.x *= d
-	hand_l.x *= d
-	hand_r.x *= d
+	# Limbs are transform nodes; every child rotates around its own joint.
+	left_upper_arm = _segment("UpperArmL", visual_root, Vector2(-9.5, -13), 16.0, SHIRT, 6.0)
+	left_forearm = _segment("ForearmL", left_upper_arm, Vector2(0, 16), 15.0, SKIN, 4.8)
+	right_upper_arm = _segment("UpperArmR", visual_root, Vector2(9.5, -13), 16.0, SHIRT, 6.0)
+	right_forearm = _segment("ForearmR", right_upper_arm, Vector2(0, 16), 15.0, SKIN, 4.8)
 
-	var torso_top: Vector2 = Vector2(body_lean, shoulder_y + body_y)
-	var torso_bottom: Vector2 = Vector2(-body_lean * 0.35, hip_y + body_y)
-	var head: Vector2 = Vector2(body_lean * 0.25, head_y + body_y)
-	var neck: Vector2 = Vector2(body_lean * 0.05, -19.0 + body_y)
-	var shoulder_l: Vector2 = torso_top + Vector2(-9.5 * d, 1.0)
-	var shoulder_r: Vector2 = torso_top + Vector2(9.5 * d, 1.0)
-	var hip_l: Vector2 = torso_bottom + Vector2(-6.5 * d, 0.0)
-	var hip_r: Vector2 = torso_bottom + Vector2(6.5 * d, 0.0)
+	left_thigh = _segment("ThighL", visual_root, Vector2(-6.5, 17), 21.0, PANTS, 7.0)
+	left_shin = _segment("ShinL", left_thigh, Vector2(0, 21), 21.0, PANTS, 6.0)
+	right_thigh = _segment("ThighR", visual_root, Vector2(6.5, 17), 21.0, PANTS, 7.0)
+	right_shin = _segment("ShinR", right_thigh, Vector2(0, 21), 21.0, PANTS, 6.0)
 
-	# Hip-to-knee-to-foot chains read as actual articulated legs.
-	_draw_limb(hip_l, knee_l + Vector2(0.0, body_y), 7.0, pants, outline)
-	_draw_limb(knee_l + Vector2(0.0, body_y), foot_l + Vector2(0.0, body_y - 1.0), 6.0, pants, outline)
-	_draw_limb(hip_r, knee_r + Vector2(0.0, body_y), 7.0, pants, outline)
-	_draw_limb(knee_r + Vector2(0.0, body_y), foot_r + Vector2(0.0, body_y - 1.0), 6.0, pants, outline)
+	_add_foot(left_shin, "FootL")
+	_add_foot(right_shin, "FootR")
 
-	# Counter-swinging arms with natural elbow arcs.
-	_draw_limb(shoulder_l, elbow_l + Vector2(0.0, body_y), 6.0, shirt, outline)
-	_draw_limb(elbow_l + Vector2(0.0, body_y), hand_l + Vector2(0.0, body_y), 4.8, skin, outline)
-	_draw_limb(shoulder_r, elbow_r + Vector2(0.0, body_y), 6.0, shirt, outline)
-	_draw_limb(elbow_r + Vector2(0.0, body_y), hand_r + Vector2(0.0, body_y), 4.8, skin, outline)
+func _segment(node_name: String, parent: Node, local_pos: Vector2, length: float, color: Color, width: float) -> Node2D:
+	var joint: Node2D = Node2D.new()
+	joint.name = node_name
+	joint.position = local_pos
+	parent.add_child(joint)
+	var outline_line: Line2D = _line("Outline", joint, width + 3.0, OUTLINE)
+	outline_line.points = PackedVector2Array([Vector2.ZERO, Vector2(0, length)])
+	var fill_line: Line2D = _line("Fill", joint, width, color)
+	fill_line.points = PackedVector2Array([Vector2.ZERO, Vector2(0, length)])
+	_circle("Joint", joint, width * 0.56, color)
+	return joint
 
-	# Feet: short shoes instead of a second long limb, keeping contact readable.
-	_draw_foot(foot_l + Vector2(3.5 * d, body_y - 1.0), d, shoe, outline)
-	_draw_foot(foot_r + Vector2(3.5 * d, body_y - 1.0), d, shoe, outline)
+func _add_foot(parent: Node2D, node_name: String) -> void:
+	var foot: Node2D = Node2D.new()
+	foot.name = node_name
+	foot.position = Vector2(0, 21)
+	parent.add_child(foot)
+	var outline_line: Line2D = _line("Outline", foot, 7.0, OUTLINE)
+	outline_line.points = PackedVector2Array([Vector2.ZERO, Vector2(8, 0)])
+	var fill_line: Line2D = _line("Fill", foot, 4.0, SHOE)
+	fill_line.points = PackedVector2Array([Vector2.ZERO, Vector2(8, 0)])
 
-	_draw_limb(neck, head + Vector2(0.0, 8.0), 5.0, skin_shadow, outline)
+func _line(node_name: String, parent: Node, width: float, color: Color) -> Line2D:
+	var line: Line2D = Line2D.new()
+	line.name = node_name
+	line.width = width
+	line.default_color = color
+	line.antialiased = true
+	parent.add_child(line)
+	return line
 
-	# Torso with a subtle highlight for depth.
-	draw_line(torso_top, torso_bottom, outline, 19.0, true)
-	draw_line(torso_top, torso_bottom, shirt, 14.0, true)
-	draw_line(torso_top + Vector2(-3.0 * d, 2.0), torso_bottom + Vector2(-1.0 * d, -2.0), shirt_light, 3.0, true)
+func _circle(node_name: String, parent: Node, radius: float, color: Color) -> Polygon2D:
+	var poly: Polygon2D = Polygon2D.new()
+	poly.name = node_name
+	poly.color = color
+	var points: PackedVector2Array = PackedVector2Array()
+	for i in range(24):
+		var a: float = TAU * float(i) / 24.0
+		points.append(Vector2(cos(a), sin(a)) * radius)
+	poly.polygon = points
+	parent.add_child(poly)
+	return poly
 
-	# Head stays round and does not rotate with the walking cycle.
-	draw_circle(head, 12.5, outline)
-	draw_circle(head, 10.2, skin)
-	var eye: Vector2 = head + Vector2(4.2 * d, -1.3)
-	draw_circle(eye, 2.2, outline)
-	draw_circle(eye + Vector2(0.55 * d, -0.5), 0.65, Color.WHITE)
+func _build_animations() -> void:
+	animation_player = AnimationPlayer.new()
+	animation_player.name = "AnimationPlayer"
+	add_child(animation_player)
+	var library: AnimationLibrary = AnimationLibrary.new()
+	library.add_animation("idle", _make_idle())
+	library.add_animation("walk", _make_walk())
+	library.add_animation("run", _make_walk())
+	library.add_animation("jump", _make_jump())
+	library.add_animation("fall", _make_fall())
+	library.add_animation("crouch", _make_crouch())
+	animation_player.add_animation_library("", library)
 
-	# Joints make the cutout character feel assembled rather than drawn as sticks.
-	draw_circle(shoulder_l, 3.8, shirt)
-	draw_circle(shoulder_r, 3.8, shirt)
-	draw_circle(knee_l + Vector2(0.0, body_y), 3.1, pants)
-	draw_circle(knee_r + Vector2(0.0, body_y), 3.1, pants)
+func _track(animation: Animation, path: NodePath, values: Array, times: Array[float]) -> void:
+	var track: int = animation.add_track(Animation.TYPE_VALUE)
+	animation.track_set_path(track, path)
+	animation.track_set_interpolation_type(track, Animation.INTERPOLATION_CUBIC)
+	for i in range(times.size()):
+		animation.track_insert_key(track, times[i], values[i])
 
-func _draw_limb(a: Vector2, b: Vector2, width: float, fill_color: Color, outline_color: Color) -> void:
-	draw_line(a, b, outline_color, width + 3.0, true)
-	draw_line(a, b, fill_color, width, true)
+func _make_walk() -> Animation:
+	var a: Animation = Animation.new()
+	var duration: float = 8.0 / walk_cycle_fps
+	a.length = duration
+	a.loop_mode = Animation.LOOP_LINEAR
+	var t: Array[float] = [0.0, 1.0 / 12.0, 2.0 / 12.0, 3.0 / 12.0, 4.0 / 12.0, 5.0 / 12.0, 6.0 / 12.0, 7.0 / 12.0, 8.0 / 12.0]
+	for i in range(t.size()):
+		t[i] *= duration
 
-func _draw_foot(position: Vector2, direction: float, fill_color: Color, outline_color: Color) -> void:
-	var toe: Vector2 = position + Vector2(7.0 * direction, 0.0)
-	draw_line(position, toe, outline_color, 7.0, true)
-	draw_line(position, toe, fill_color, 4.0, true)
+	# Authored 8-pose cycle: Contact, Down, Passing, Up, then the mirrored half.
+	var thigh_l: Array[float] = [deg_to_rad(-25), deg_to_rad(-15), deg_to_rad(4), deg_to_rad(18), deg_to_rad(25), deg_to_rad(15), deg_to_rad(-4), deg_to_rad(-18), deg_to_rad(-25)]
+	var shin_l: Array[float] = [deg_to_rad(9), deg_to_rad(24), deg_to_rad(7), deg_to_rad(-2), deg_to_rad(-9), deg_to_rad(-24), deg_to_rad(-7), deg_to_rad(2), deg_to_rad(9)]
+	var thigh_r: Array[float] = [deg_to_rad(25), deg_to_rad(15), deg_to_rad(-4), deg_to_rad(-18), deg_to_rad(-25), deg_to_rad(-15), deg_to_rad(4), deg_to_rad(18), deg_to_rad(25)]
+	var shin_r: Array[float] = [deg_to_rad(-9), deg_to_rad(-24), deg_to_rad(-7), deg_to_rad(2), deg_to_rad(9), deg_to_rad(24), deg_to_rad(7), deg_to_rad(-2), deg_to_rad(-9)]
+	var arm_l: Array[float] = [deg_to_rad(22), deg_to_rad(14), deg_to_rad(-2), deg_to_rad(-16), deg_to_rad(-22), deg_to_rad(-14), deg_to_rad(2), deg_to_rad(16), deg_to_rad(22)]
+	var fore_l: Array[float] = [deg_to_rad(-10), deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(-5), deg_to_rad(10), deg_to_rad(18), deg_to_rad(12), deg_to_rad(5), deg_to_rad(-10)]
+	var arm_r: Array[float] = [deg_to_rad(-22), deg_to_rad(-14), deg_to_rad(2), deg_to_rad(16), deg_to_rad(22), deg_to_rad(14), deg_to_rad(-2), deg_to_rad(-16), deg_to_rad(-22)]
+	var fore_r: Array[float] = [deg_to_rad(10), deg_to_rad(18), deg_to_rad(12), deg_to_rad(5), deg_to_rad(-10), deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(-5), deg_to_rad(10)]
+	var torso_rot: Array[float] = [deg_to_rad(1), deg_to_rad(1.5), deg_to_rad(1), deg_to_rad(0), deg_to_rad(-1), deg_to_rad(-1.5), deg_to_rad(-1), deg_to_rad(0), deg_to_rad(1)]
+	var bob: Array[Vector2] = [Vector2(0,0), Vector2(0,1.2), Vector2(0,0.5), Vector2(0,-0.8), Vector2(0,0), Vector2(0,1.2), Vector2(0,0.5), Vector2(0,-0.8), Vector2(0,0)]
+
+	_track(a, NodePath("Rig/VisualRoot/ThighL:rotation"), thigh_l, t)
+	_track(a, NodePath("Rig/VisualRoot/ThighL/ShinL:rotation"), shin_l, t)
+	_track(a, NodePath("Rig/VisualRoot/ThighR:rotation"), thigh_r, t)
+	_track(a, NodePath("Rig/VisualRoot/ThighR/ShinR:rotation"), shin_r, t)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmL:rotation"), arm_l, t)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmL/ForearmL:rotation"), fore_l, t)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmR:rotation"), arm_r, t)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmR/ForearmR:rotation"), fore_r, t)
+	_track(a, NodePath("Rig/VisualRoot:rotation"), torso_rot, t)
+	_track(a, NodePath("Rig/VisualRoot:position"), bob, t)
+	return a
+
+func _make_idle() -> Animation:
+	var a: Animation = Animation.new()
+	a.length = 1.8
+	a.loop_mode = Animation.LOOP_LINEAR
+	var times: Array[float] = [0.0, 0.9, 1.8]
+	_track(a, NodePath("Rig/VisualRoot:position"), [Vector2.ZERO, Vector2(0, -0.45), Vector2.ZERO], times)
+	_track(a, NodePath("Rig/VisualRoot:rotation"), [0.0, deg_to_rad(0.4), 0.0], times)
+	return a
+
+func _make_jump() -> Animation:
+	var a: Animation = Animation.new()
+	a.length = 0.35
+	a.loop_mode = Animation.LOOP_NONE
+	_track(a, NodePath("Rig/VisualRoot:rotation"), [deg_to_rad(-2), deg_to_rad(3)], [0.0, 0.35])
+	_track(a, NodePath("Rig/VisualRoot:position"), [Vector2(0,-2), Vector2(0,0)], [0.0, 0.35])
+	return a
+
+func _make_fall() -> Animation:
+	var a: Animation = Animation.new()
+	a.length = 0.45
+	a.loop_mode = Animation.LOOP_LINEAR
+	_track(a, NodePath("Rig/VisualRoot:rotation"), [deg_to_rad(2), deg_to_rad(-2)], [0.0, 0.45])
+	return a
+
+func _make_crouch() -> Animation:
+	var a: Animation = Animation.new()
+	a.length = 0.18
+	a.loop_mode = Animation.LOOP_LINEAR
+	_track(a, NodePath("Rig/VisualRoot:position"), [Vector2.ZERO, Vector2(0, 5)], [0.0, 0.18])
+	return a
