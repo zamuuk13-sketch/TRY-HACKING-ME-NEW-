@@ -1,14 +1,304 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=10 format=3]
 
-[ext_resource path="res://scripts/player.gd" type="Script" id="1_player"]
+[ext_resource type="Script" path="res://scripts/player_controller.gd" id="1_controller"]
 
 [sub_resource type="CapsuleShape2D" id="Capsule_player"]
 radius = 11.0
 height = 64.0
 
+[sub_resource type="Animation" id="Animation_RESET"]
+resource_name = "RESET"
+length = 0.1
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+length = 1.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Rig/VisualRoot:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0, 0.5, 1), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Vector2(0, 0), Vector2(0, -0.45), Vector2(0, 0)]}
+
+[sub_resource type="Animation" id="Animation_walk"]
+resource_name = "walk"
+length = 0.333333
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Rig/VisualRoot/ThighL:rotation")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [0.453786, 0.296706, 0.0872665, -0.261799, -0.453786]}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Rig/VisualRoot/ThighL/ShinL:rotation")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [-0.122173, -0.401426, -0.15708, 0.0698132, 0.122173]}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Rig/VisualRoot/ThighR:rotation")
+tracks/2/interp = 2
+tracks/2/loop_wrap = true
+tracks/2/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [-0.453786, -0.296706, -0.0872665, 0.261799, 0.453786]}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Rig/VisualRoot/ThighR/ShinR:rotation")
+tracks/3/interp = 2
+tracks/3/loop_wrap = true
+tracks/3/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [0.122173, 0.401426, 0.15708, -0.0698132, -0.122173]}
+tracks/4/type = "value"
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/path = NodePath("Rig/VisualRoot/UpperArmL:rotation")
+tracks/4/interp = 2
+tracks/4/loop_wrap = true
+tracks/4/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [-0.349066, -0.20944, -0.0349066, 0.244346, 0.349066]}
+tracks/5/type = "value"
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/path = NodePath("Rig/VisualRoot/UpperArmL/ForearmL:rotation")
+tracks/5/interp = 2
+tracks/5/loop_wrap = true
+tracks/5/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [0.122173, 0.191986, 0.0872665, -0.122173, -0.122173]}
+tracks/6/type = "value"
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/path = NodePath("Rig/VisualRoot/UpperArmR:rotation")
+tracks/6/interp = 2
+tracks/6/loop_wrap = true
+tracks/6/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [0.349066, 0.20944, 0.0349066, -0.244346, -0.349066]}
+tracks/7/type = "value"
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/path = NodePath("Rig/VisualRoot/UpperArmR/ForearmR:rotation")
+tracks/7/interp = 2
+tracks/7/loop_wrap = true
+tracks/7/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [-0.122173, -0.191986, -0.0872665, 0.122173, 0.122173]}
+tracks/8/type = "value"
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/path = NodePath("Rig/VisualRoot:rotation")
+tracks/8/interp = 2
+tracks/8/loop_wrap = true
+tracks/8/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [0.0244346, 0.0663225, 0.00349066, -0.0488692, -0.0244346]}
+tracks/9/type = "value"
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/path = NodePath("Rig/VisualRoot:position")
+tracks/9/interp = 2
+tracks/9/loop_wrap = true
+tracks/9/keys = {"times": PackedFloat32Array(0, 0.0833333, 0.166667, 0.25, 0.333333), "transitions": PackedFloat32Array(1, 1, 1, 1, 1), "update": 0, "values": [Vector2(0, 0), Vector2(0, 2.2), Vector2(0, 0.3), Vector2(0, -2), Vector2(0, 0)]}
+
+[sub_resource type="Animation" id="Animation_run"]
+resource_name = "run"
+length = 0.333333
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/path = NodePath("Rig/VisualRoot:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0, 0.333333), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(1, 1), Vector2(1, 1)]}
+
+[sub_resource type="Animation" id="Animation_jump"]
+resource_name = "jump"
+length = 0.35
+tracks/0/type = "value"
+tracks/0/path = NodePath("Rig/VisualRoot:rotation")
+tracks/0/interp = 2
+tracks/0/loop_wrap = false
+tracks/0/keys = {"times": PackedFloat32Array(0, 0.35), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [-0.0349066, 0.0523599]}
+
+[sub_resource type="Animation" id="Animation_fall"]
+resource_name = "fall"
+length = 0.45
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/path = NodePath("Rig/VisualRoot:rotation")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0, 0.45), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [0.0349066, -0.0349066]}
+
+[sub_resource type="Animation" id="Animation_crouch"]
+resource_name = "crouch"
+length = 0.18
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/path = NodePath("Rig/VisualRoot:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0, 0.18), "transitions": PackedFloat32Array(1, 1), "update": 0, "values": [Vector2(0, 0), Vector2(0, 5)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_player"]
+_data = {&"RESET": SubResource("Animation_RESET"), &"crouch": SubResource("Animation_crouch"), &"fall": SubResource("Animation_fall"), &"idle": SubResource("Animation_idle"), &"jump": SubResource("Animation_jump"), &"run": SubResource("Animation_run"), &"walk": SubResource("Animation_walk")}
+
 [node name="Player" type="CharacterBody2D"]
-script = ExtResource("1_player")
+script = ExtResource("1_controller")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 2)
 shape = SubResource("Capsule_player")
+
+[node name="Rig" type="Node2D" parent="."]
+
+[node name="VisualRoot" type="Node2D" parent="Rig"]
+
+[node name="TorsoOutline" type="Line2D" parent="Rig/VisualRoot"]
+width = 19.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+antialiased = true
+points = PackedVector2Array(0, -14, 0, 17)
+
+[node name="Torso" type="Line2D" parent="Rig/VisualRoot"]
+width = 14.0
+default_color = Color(0.12, 0.15, 0.19, 1)
+antialiased = true
+points = PackedVector2Array(0, -14, 0, 17)
+
+[node name="TorsoHighlight" type="Line2D" parent="Rig/VisualRoot"]
+width = 3.0
+default_color = Color(0.2, 0.24, 0.29, 1)
+antialiased = true
+points = PackedVector2Array(-3, -11, -1, 13)
+
+[node name="Head" type="Node2D" parent="Rig/VisualRoot"]
+position = Vector2(0, -31)
+
+[node name="HeadOutline" type="Polygon2D" parent="Rig/VisualRoot/Head"]
+color = Color(0.025, 0.028, 0.035, 1)
+polygon = PackedVector2Array(12.5, 0, 11.547, 5.171, 8.839, 8.839, 5.171, 11.547, 0, 12.5, -5.171, 11.547, -8.839, 8.839, -11.547, 5.171, -12.5, 0, -11.547, -5.171, -8.839, -8.839, -5.171, -11.547, 0, -12.5, 5.171, -11.547, 8.839, -8.839, 11.547, -5.171)
+
+[node name="HeadFill" type="Polygon2D" parent="Rig/VisualRoot/Head"]
+color = Color(0.96, 0.96, 0.96, 1)
+polygon = PackedVector2Array(10.2, 0, 9.425, 4.221, 7.212, 7.212, 4.221, 9.425, 0, 10.2, -4.221, 9.425, -7.212, 7.212, -9.425, 4.221, -10.2, 0, -9.425, -4.221, -7.212, -7.212, -4.221, -9.425, 0, -10.2, 4.221, -9.425, 7.212, -7.212, 9.425, -4.221)
+
+[node name="Eye" type="Polygon2D" parent="Rig/VisualRoot/Head"]
+position = Vector2(4.2, -1.3)
+color = Color(0.025, 0.028, 0.035, 1)
+polygon = PackedVector2Array(2.2, 0, 1.905, 1.1, 1.1, 1.905, 0, 2.2, -1.1, 1.905, -1.905, 1.1, -2.2, 0, -1.905, -1.1, -1.1, -1.905, 0, -2.2, 1.1, -1.905, 1.905, -1.1)
+
+[node name="UpperArmL" type="Node2D" parent="Rig/VisualRoot"]
+position = Vector2(-9.5, -13)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/UpperArmL"]
+width = 9.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 16)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/UpperArmL"]
+width = 6.0
+default_color = Color(0.12, 0.15, 0.19, 1)
+points = PackedVector2Array(0, 0, 0, 16)
+
+[node name="ForearmL" type="Node2D" parent="Rig/VisualRoot/UpperArmL"]
+position = Vector2(0, 16)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/UpperArmL/ForearmL"]
+width = 7.8
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 15)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/UpperArmL/ForearmL"]
+width = 4.8
+default_color = Color(0.96, 0.96, 0.96, 1)
+points = PackedVector2Array(0, 0, 0, 15)
+
+[node name="UpperArmR" type="Node2D" parent="Rig/VisualRoot"]
+position = Vector2(9.5, -13)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/UpperArmR"]
+width = 9.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 16)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/UpperArmR"]
+width = 6.0
+default_color = Color(0.12, 0.15, 0.19, 1)
+points = PackedVector2Array(0, 0, 0, 16)
+
+[node name="ForearmR" type="Node2D" parent="Rig/VisualRoot/UpperArmR"]
+position = Vector2(0, 16)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/UpperArmR/ForearmR"]
+width = 7.8
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 15)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/UpperArmR/ForearmR"]
+width = 4.8
+default_color = Color(0.96, 0.96, 0.96, 1)
+points = PackedVector2Array(0, 0, 0, 15)
+
+[node name="ThighL" type="Node2D" parent="Rig/VisualRoot"]
+position = Vector2(-6.5, 17)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/ThighL"]
+width = 10.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/ThighL"]
+width = 7.0
+default_color = Color(0.065, 0.075, 0.095, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="ShinL" type="Node2D" parent="Rig/VisualRoot/ThighL"]
+position = Vector2(0, 21)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/ThighL/ShinL"]
+width = 9.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/ThighL/ShinL"]
+width = 6.0
+default_color = Color(0.065, 0.075, 0.095, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="FootL" type="Line2D" parent="Rig/VisualRoot/ThighL/ShinL"]
+position = Vector2(0, 21)
+width = 7.0
+default_color = Color(0.02, 0.022, 0.028, 1)
+points = PackedVector2Array(0, 0, 8, 0)
+
+[node name="ThighR" type="Node2D" parent="Rig/VisualRoot"]
+position = Vector2(6.5, 17)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/ThighR"]
+width = 10.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/ThighR"]
+width = 7.0
+default_color = Color(0.065, 0.075, 0.095, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="ShinR" type="Node2D" parent="Rig/VisualRoot/ThighR"]
+position = Vector2(0, 21)
+
+[node name="Outline" type="Line2D" parent="Rig/VisualRoot/ThighR/ShinR"]
+width = 9.0
+default_color = Color(0.025, 0.028, 0.035, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="Fill" type="Line2D" parent="Rig/VisualRoot/ThighR/ShinR"]
+width = 6.0
+default_color = Color(0.065, 0.075, 0.095, 1)
+points = PackedVector2Array(0, 0, 0, 21)
+
+[node name="FootR" type="Line2D" parent="Rig/VisualRoot/ThighR/ShinR"]
+position = Vector2(0, 21)
+width = 7.0
+default_color = Color(0.02, 0.022, 0.028, 1)
+points = PackedVector2Array(0, 0, 8, 0)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {&"": SubResource("AnimationLibrary_player")}
