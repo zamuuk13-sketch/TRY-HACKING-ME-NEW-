@@ -29,19 +29,19 @@ if not defined GODOT (
 )
 
 echo [INFO] Godot executable: %GODOT% >> "%LOG%"
-echo [INFO] Launching project... >> "%LOG%"
+echo [INFO] Launching project in DEBUG PANEL mode... >> "%LOG%"
 echo.
 echo ================================================
 echo TRY HACKING ME NOW - DEBUG MODE
 echo ================================================
 echo Log: %LOG%
 echo.
-echo O jogo vai abrir normalmente.
+echo O painel de diagnostico vai aparecer automaticamente.
 echo Feche o jogo quando terminar o teste.
 echo Depois me envie o arquivo godot_debug.log.
 echo.
 
-"%GODOT%" --path "%ROOT%" --verbose >> "%LOG%" 2>&1
+"%GODOT%" --path "%ROOT%" --debug-diagnostics --verbose >> "%LOG%" 2>&1
 set "EXITCODE=%ERRORLEVEL%"
 
 echo. >> "%LOG%"
