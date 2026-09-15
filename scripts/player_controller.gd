@@ -87,18 +87,19 @@ func _reset_pose() -> void:
 func _play_state(state: String) -> void:
 	animation_state = state
 
-	# The run resource previously contained only a scale track. That track fought
-	# with the facing code and made sprinting look frozen. Run now uses the same
-	# authored walk animation at a higher speed.
+	# Sprint uses the authored walk cycle at a higher playback speed. The old
+	# run animation only keyed VisualRoot.scale and could overwrite facing.
 	var clip := "walk" if state == "run" else state
 	if not animation_player.has_animation(clip):
 		clip = "idle"
 
-	# Stop the previous clip before switching. This prevents an old pose from
-	# surviving when entering a state whose animation does not key every limb.
 	animation_player.stop()
-	if state == "idle":
+
+	# Only walk/run key every limb. Reset first when entering idle, jump, fall,
+	# or crouch so a previous walk pose can never remain stuck on the character.
+	if clip != "walk":
 		_reset_pose()
+
 	animation_player.play(clip, 0.10 if state != "idle" else 0.16)
 	animation_player.speed_scale = 1.0
 	if state == "walk":
