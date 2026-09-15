@@ -25,6 +25,7 @@ func _ready() -> void:
 	modulate = Color.WHITE
 	self_modulate = Color.WHITE
 	z_index = 100
+	_reset_pose()
 	_play_state("idle")
 
 func _physics_process(delta: float) -> void:
@@ -62,20 +63,45 @@ func _update_animation_state() -> void:
 		next_state = "crouch"
 	elif abs(velocity.x) > 15.0:
 		next_state = "run" if is_sprinting else "walk"
+
 	if next_state != animation_state:
 		_play_state(next_state)
 
 func _update_facing() -> void:
+	if visual_root == null:
+		return
 	visual_root.scale.x = abs(visual_root.scale.x) * facing_direction
+
+func _reset_pose() -> void:
+	visual_root.position = Vector2.ZERO
+	visual_root.rotation = 0.0
+	$Rig/VisualRoot/ThighL.rotation = 0.0
+	$Rig/VisualRoot/ThighL/ShinL.rotation = 0.0
+	$Rig/VisualRoot/ThighR.rotation = 0.0
+	$Rig/VisualRoot/ThighR/ShinR.rotation = 0.0
+	$Rig/VisualRoot/UpperArmL.rotation = 0.0
+	$Rig/VisualRoot/UpperArmL/ForearmL.rotation = 0.0
+	$Rig/VisualRoot/UpperArmR.rotation = 0.0
+	$Rig/VisualRoot/UpperArmR/ForearmR.rotation = 0.0
 
 func _play_state(state: String) -> void:
 	animation_state = state
+
+	# The run resource previously contained only a scale track. That track fought
+	# with the facing code and made sprinting look frozen. Run now uses the same
+	# authored walk animation at a higher speed.
 	var clip := "walk" if state == "run" else state
 	if not animation_player.has_animation(clip):
 		clip = "idle"
-	animation_player.play(clip, 0.12 if clip != "idle" else 0.18)
+
+	# Stop the previous clip before switching. This prevents an old pose from
+	# surviving when entering a state whose animation does not key every limb.
+	animation_player.stop()
+	if state == "idle":
+		_reset_pose()
+	animation_player.play(clip, 0.10 if state != "idle" else 0.16)
 	animation_player.speed_scale = 1.0
 	if state == "walk":
 		animation_player.speed_scale = max(walk_cycle_fps / 12.0, 0.01)
 	elif state == "run":
-		animation_player.speed_scale = 1.35
+		animation_player.speed_scale = max((walk_cycle_fps / 12.0) * 1.35, 0.01)
