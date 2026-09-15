@@ -11,7 +11,6 @@ const STICKMAN_TEXTURE: Texture2D = preload("res://imageens/stickman foda 3 sem 
 @export var max_fall_speed := 1100.0
 
 @onready var player_sprite: Sprite2D = $StickmanSprite
-@onready var camera: Camera2D = $Camera
 
 var facing_direction := 1.0
 var is_sprinting := false
@@ -19,7 +18,6 @@ var is_crouching := false
 var animation_time := 0.0
 var base_position := Vector2(0, -78)
 var base_scale := Vector2(0.20, 0.20)
-var last_reported_position := Vector2.ZERO
 
 func _ready() -> void:
 	z_index = 1000
@@ -40,29 +38,16 @@ func _ready() -> void:
 	player_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	player_sprite.centered = true
 
-	if camera != null:
-		camera.enabled = true
-		camera.position = Vector2.ZERO
-		camera.position_smoothing_enabled = false
-
-	last_reported_position = global_position
 	print("[PLAYER] READY | texture=", STICKMAN_TEXTURE.get_width(), "x", STICKMAN_TEXTURE.get_height())
 	print("[PLAYER] global_position=", global_position)
 	print("[PLAYER] sprite_position=", player_sprite.position)
 	print("[PLAYER] sprite_scale=", player_sprite.scale)
 	print("[PLAYER] sprite_visible=", player_sprite.visible)
-	print("[PLAYER] camera_enabled=", camera != null and camera.enabled)
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
-	# Direct keyboard polling makes movement independent of the InputMap.
-	var axis := 0.0
-	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
-		axis -= 1.0
-	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
-		axis += 1.0
-
-	is_crouching = (Input.is_key_pressed(KEY_C) or Input.is_key_pressed(KEY_DOWN)) and is_on_floor()
+	var axis := Input.get_axis("move_left", "move_right")
+	is_crouching = Input.is_action_pressed("crouch") and is_on_floor()
 	is_sprinting = Input.is_key_pressed(KEY_SHIFT) and not is_crouching
 	var speed := sprint_speed if is_sprinting else move_speed
 	if is_crouching:
@@ -79,15 +64,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		if velocity.y > 0.0:
 			velocity.y = 0.0
-		if Input.is_key_pressed(KEY_SPACE) and not is_crouching:
+		if Input.is_action_just_pressed("jump") and not is_crouching:
 			velocity.y = -jump_power
 
 	move_and_slide()
-
-	if global_position.distance_to(last_reported_position) > 2.0:
-		print("[PLAYER] MOVING | pos=", global_position, " velocity=", velocity)
-		last_reported_position = global_position
-
 	_update_visual(delta)
 
 func _update_visual(delta: float) -> void:
@@ -123,6 +103,7 @@ func _update_visual(delta: float) -> void:
 	player_sprite.rotation = lerp_angle(player_sprite.rotation, target_rot, smooth)
 	player_sprite.scale = player_sprite.scale.lerp(target_scale, smooth)
 	player_sprite.visible = true
+
 	queue_redraw()
 
 func _draw() -> void:
