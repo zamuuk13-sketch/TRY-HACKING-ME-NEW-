@@ -18,43 +18,33 @@ var is_crouching := false
 var animation_time := 0.0
 var base_position := Vector2(0, -78)
 var base_scale := Vector2(0.20, 0.20)
-var use_png := true
 
 func _ready() -> void:
+	# Make the Player impossible to hide behind the world.
 	z_index = 1000
+	z_as_relative = false
+	visible = true
+	modulate = Color.WHITE
+	self_modulate = Color.WHITE
+
+	# Keep the real PNG independent from the procedural diagnostic body.
 	player_sprite.texture = STICKMAN_TEXTURE
 	player_sprite.visible = true
-	player_sprite.modulate = Color.WHITE
-	player_sprite.self_modulate = Color.WHITE
-	player_sprite.centered = true
 	player_sprite.position = base_position
 	player_sprite.scale = base_scale
 	player_sprite.rotation = 0.0
 	player_sprite.z_index = 10
 	player_sprite.z_as_relative = false
+	player_sprite.modulate = Color.WHITE
+	player_sprite.self_modulate = Color.WHITE
 	player_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	player_sprite.centered = true
 
-	# Verify that the PNG actually contains visible pixels.
-	var img := STICKMAN_TEXTURE.get_image()
-	var visible_pixels := 0
-	if img != null and not img.is_empty():
-		var step_x := max(1, img.get_width() / 24)
-		var step_y := max(1, img.get_height() / 24)
-		for y in range(0, img.get_height(), step_y):
-			for x in range(0, img.get_width(), step_x):
-				if img.get_pixel(x, y).a > 0.05:
-					visible_pixels += 1
-					break
-			if visible_pixels > 0:
-				break
-
-	use_png = visible_pixels > 0
-	print("[PLAYER] texture=", STICKMAN_TEXTURE.get_width(), "x", STICKMAN_TEXTURE.get_height(), " visible_pixels=", visible_pixels)
-	print("[PLAYER] visible_in_tree=", is_visible_in_tree(), " global_position=", global_position)
-
-	if not use_png:
-		print("[PLAYER] PNG has no visible alpha pixels. Using procedural fallback.")
-
+	print("[PLAYER] READY | texture=", STICKMAN_TEXTURE.get_width(), "x", STICKMAN_TEXTURE.get_height())
+	print("[PLAYER] global_position=", global_position)
+	print("[PLAYER] sprite_position=", player_sprite.position)
+	print("[PLAYER] sprite_scale=", player_sprite.scale)
+	print("[PLAYER] sprite_visible=", player_sprite.visible)
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
@@ -114,12 +104,24 @@ func _update_visual(delta: float) -> void:
 	player_sprite.position = player_sprite.position.lerp(target_pos, smooth)
 	player_sprite.rotation = lerp_angle(player_sprite.rotation, target_rot, smooth)
 	player_sprite.scale = player_sprite.scale.lerp(target_scale, smooth)
-	player_sprite.visible = use_png
+	player_sprite.visible = true
 
 	queue_redraw()
 
 func _draw() -> void:
-	# Shadow under the character.
+	# This procedural stickman is ALWAYS drawn, independently of the PNG.
+	# It is intentionally behind the PNG and acts as a guaranteed render test.
+	var s := facing_direction
+	var bob := 1.5 * sin(animation_time * 2.0)
+	var head := Vector2(0, -142 + bob)
+	var neck := Vector2(0, -123 + bob)
+	var hip := Vector2(0, -65 + bob)
+	var left_hand := Vector2(-30 * s, -94 + bob)
+	var right_hand := Vector2(30 * s, -94 + bob)
+	var left_foot := Vector2(-16 * s, 0)
+	var right_foot := Vector2(16 * s, 0)
+
+	# Shadow.
 	if is_on_floor():
 		var shadow := PackedVector2Array()
 		for i in range(24):
@@ -127,27 +129,13 @@ func _draw() -> void:
 			shadow.append(Vector2(cos(a) * 15.0, 3.0 + sin(a) * 3.2))
 		draw_colored_polygon(shadow, Color(0, 0, 0, 0.16))
 
-	# Guaranteed visible fallback if the PNG itself is empty/transparent.
-	if not use_png:
-		var s := facing_direction
-		var bob := 1.5 * sin(animation_time * 2.0)
-		var head := Vector2(0, -142 + bob)
-		var neck := Vector2(0, -123 + bob)
-		var hip := Vector2(0, -65 + bob)
-		var left_hand := Vector2(-30 * s, -94 + bob)
-		var right_hand := Vector2(30 * s, -94 + bob)
-		var left_foot := Vector2(-16 * s, 0)
-		var right_foot := Vector2(16 * s, 0)
-
-		# Body and limbs.
-		draw_line(neck, hip, Color.BLACK, 9.0, true)
-		draw_line(neck, left_hand, Color.BLACK, 7.0, true)
-		draw_line(neck, right_hand, Color.BLACK, 7.0, true)
-		draw_line(hip, left_foot, Color.BLACK, 8.0, true)
-		draw_line(hip, right_foot, Color.BLACK, 8.0, true)
-		draw_circle(head, 22.0, Color.BLACK)
-
-		# Small white face area so the fallback is clearly visible on the paper background.
-		draw_circle(head, 15.0, Color.WHITE)
-		draw_circle(head + Vector2(-5 * s, -2), 2.5, Color.BLACK)
-		draw_circle(head + Vector2(5 * s, -2), 2.5, Color.BLACK)
+	# Guaranteed black body.
+	draw_line(neck, hip, Color.BLACK, 9.0, true)
+	draw_line(neck, left_hand, Color.BLACK, 7.0, true)
+	draw_line(neck, right_hand, Color.BLACK, 7.0, true)
+	draw_line(hip, left_foot, Color.BLACK, 8.0, true)
+	draw_line(hip, right_foot, Color.BLACK, 8.0, true)
+	draw_circle(head, 22.0, Color.BLACK)
+	draw_circle(head, 15.0, Color.WHITE)
+	draw_circle(head + Vector2(-5 * s, -2), 2.5, Color.BLACK)
+	draw_circle(head + Vector2(5 * s, -2), 2.5, Color.BLACK)
