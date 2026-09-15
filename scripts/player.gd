@@ -1,7 +1,6 @@
 extends CharacterBody2D
 ## TRY HACKING ME NOW — lightweight 2D cutout character with authored keyframe walk.
-## Movement/physics stay on CharacterBody2D. Visual animation is a real
-## transform hierarchy driven by AnimationPlayer keyframes.
+## Movement/physics stay on CharacterBody2D. Visual animation is a transform hierarchy driven by AnimationPlayer.
 
 @export_category("Movement")
 @export var move_speed: float = 260.0
@@ -109,7 +108,10 @@ func _play_state(state: String) -> void:
 	var clip: String = state
 	if not animation_player.has_animation(clip):
 		clip = "idle"
-	animation_player.play(clip, 0.10)
+	# A slightly longer crossfade is important when stopping: it blends the exact
+	# current walk pose into the neutral idle pose instead of freezing at a frame.
+	var blend: float = 0.18 if state == "idle" else 0.10
+	animation_player.play(clip, blend)
 	animation_player.speed_scale = 1.0
 	if state == "run":
 		animation_player.speed_scale = 1.35
@@ -123,7 +125,6 @@ func _build_rig() -> void:
 	visual_root.name = "VisualRoot"
 	rig.add_child(visual_root)
 
-	# Torso.
 	torso = _line("Torso", visual_root, 19.0, OUTLINE)
 	torso.points = PackedVector2Array([Vector2(0, -14), Vector2(0, 17)])
 	var shirt_line: Line2D = _line("Shirt", visual_root, 14.0, SHIRT)
@@ -131,7 +132,6 @@ func _build_rig() -> void:
 	torso_highlight = _line("TorsoHighlight", visual_root, 3.0, SHIRT_LIGHT)
 	torso_highlight.points = PackedVector2Array([Vector2(-3, -11), Vector2(-1, 13)])
 
-	# Head.
 	head = Node2D.new()
 	head.name = "Head"
 	head.position = Vector2(0, -31)
@@ -145,7 +145,6 @@ func _build_rig() -> void:
 	var eye_glint: Polygon2D = _circle("EyeGlint", head, 0.65, Color.WHITE)
 	eye_glint.position = Vector2(4.75, -1.8)
 
-	# Limbs are transform nodes; every child rotates around its own joint.
 	left_upper_arm = _segment("UpperArmL", visual_root, Vector2(-9.5, -13), 16.0, SHIRT, 6.0)
 	left_forearm = _segment("ForearmL", left_upper_arm, Vector2(0, 16), 15.0, SKIN, 4.8)
 	right_upper_arm = _segment("UpperArmR", visual_root, Vector2(9.5, -13), 16.0, SHIRT, 6.0)
@@ -231,17 +230,22 @@ func _make_walk() -> Animation:
 	for i in range(t.size()):
 		t[i] *= duration
 
-	# Authored 8-pose cycle: Contact, Down, Passing, Up, then the mirrored half.
-	var thigh_l: Array[float] = [deg_to_rad(-25), deg_to_rad(-15), deg_to_rad(4), deg_to_rad(18), deg_to_rad(25), deg_to_rad(15), deg_to_rad(-4), deg_to_rad(-18), deg_to_rad(-25)]
-	var shin_l: Array[float] = [deg_to_rad(9), deg_to_rad(24), deg_to_rad(7), deg_to_rad(-2), deg_to_rad(-9), deg_to_rad(-24), deg_to_rad(-7), deg_to_rad(2), deg_to_rad(9)]
-	var thigh_r: Array[float] = [deg_to_rad(25), deg_to_rad(15), deg_to_rad(-4), deg_to_rad(-18), deg_to_rad(-25), deg_to_rad(-15), deg_to_rad(4), deg_to_rad(18), deg_to_rad(25)]
-	var shin_r: Array[float] = [deg_to_rad(-9), deg_to_rad(-24), deg_to_rad(-7), deg_to_rad(2), deg_to_rad(9), deg_to_rad(24), deg_to_rad(7), deg_to_rad(-2), deg_to_rad(-9)]
-	var arm_l: Array[float] = [deg_to_rad(22), deg_to_rad(14), deg_to_rad(-2), deg_to_rad(-16), deg_to_rad(-22), deg_to_rad(-14), deg_to_rad(2), deg_to_rad(16), deg_to_rad(22)]
-	var fore_l: Array[float] = [deg_to_rad(-10), deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(-5), deg_to_rad(10), deg_to_rad(18), deg_to_rad(12), deg_to_rad(5), deg_to_rad(-10)]
-	var arm_r: Array[float] = [deg_to_rad(-22), deg_to_rad(-14), deg_to_rad(2), deg_to_rad(16), deg_to_rad(22), deg_to_rad(14), deg_to_rad(-2), deg_to_rad(-16), deg_to_rad(-22)]
-	var fore_r: Array[float] = [deg_to_rad(10), deg_to_rad(18), deg_to_rad(12), deg_to_rad(5), deg_to_rad(-10), deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(-5), deg_to_rad(10)]
-	var torso_rot: Array[float] = [deg_to_rad(1), deg_to_rad(1.5), deg_to_rad(1), deg_to_rad(0), deg_to_rad(-1), deg_to_rad(-1.5), deg_to_rad(-1), deg_to_rad(0), deg_to_rad(1)]
-	var bob: Array[Vector2] = [Vector2(0,0), Vector2(0,1.2), Vector2(0,0.5), Vector2(0,-0.8), Vector2(0,0), Vector2(0,1.2), Vector2(0,0.5), Vector2(0,-0.8), Vector2(0,0)]
+	# Eight clean landmarks: contact -> down -> passing -> up -> mirrored half.
+	# Legs are always opposite. The forward leg stays separated from the rear leg.
+	var thigh_l: Array[float] = [deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(3), deg_to_rad(13), deg_to_rad(18), deg_to_rad(12), deg_to_rad(-3), deg_to_rad(-13), deg_to_rad(-18)]
+	var shin_l: Array[float] = [deg_to_rad(7), deg_to_rad(18), deg_to_rad(8), deg_to_rad(-1), deg_to_rad(-7), deg_to_rad(-18), deg_to_rad(-8), deg_to_rad(1), deg_to_rad(7)]
+	var thigh_r: Array[float] = [deg_to_rad(18), deg_to_rad(12), deg_to_rad(-3), deg_to_rad(-13), deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(3), deg_to_rad(13), deg_to_rad(18)]
+	var shin_r: Array[float] = [deg_to_rad(-7), deg_to_rad(-18), deg_to_rad(-8), deg_to_rad(1), deg_to_rad(7), deg_to_rad(18), deg_to_rad(8), deg_to_rad(-1), deg_to_rad(-7)]
+
+	# Arms are the exact counter-swing: when the right leg goes forward,
+	# the right arm goes back; then both exchange sides.
+	var arm_l: Array[float] = [deg_to_rad(15), deg_to_rad(11), deg_to_rad(2), deg_to_rad(-11), deg_to_rad(-15), deg_to_rad(-11), deg_to_rad(-2), deg_to_rad(11), deg_to_rad(15)]
+	var fore_l: Array[float] = [deg_to_rad(-7), deg_to_rad(-11), deg_to_rad(-8), deg_to_rad(-3), deg_to_rad(7), deg_to_rad(11), deg_to_rad(8), deg_to_rad(3), deg_to_rad(-7)]
+	var arm_r: Array[float] = [deg_to_rad(-15), deg_to_rad(-11), deg_to_rad(-2), deg_to_rad(11), deg_to_rad(15), deg_to_rad(11), deg_to_rad(2), deg_to_rad(-11), deg_to_rad(-15)]
+	var fore_r: Array[float] = [deg_to_rad(7), deg_to_rad(11), deg_to_rad(8), deg_to_rad(3), deg_to_rad(-7), deg_to_rad(-11), deg_to_rad(-8), deg_to_rad(-3), deg_to_rad(7)]
+
+	var torso_rot: Array[float] = [deg_to_rad(0.8), deg_to_rad(1.1), deg_to_rad(0.7), deg_to_rad(0.0), deg_to_rad(-0.8), deg_to_rad(-1.1), deg_to_rad(-0.7), deg_to_rad(0.0), deg_to_rad(0.8)]
+	var bob: Array[Vector2] = [Vector2.ZERO, Vector2(0, 0.9), Vector2(0, 0.35), Vector2(0, -0.45), Vector2.ZERO, Vector2(0, 0.9), Vector2(0, 0.35), Vector2(0, -0.45), Vector2.ZERO]
 
 	_track(a, NodePath("Rig/VisualRoot/ThighL:rotation"), thigh_l, t)
 	_track(a, NodePath("Rig/VisualRoot/ThighL/ShinL:rotation"), shin_l, t)
@@ -262,6 +266,16 @@ func _make_idle() -> Animation:
 	var times: Array[float] = [0.0, 0.9, 1.8]
 	_track(a, NodePath("Rig/VisualRoot:position"), [Vector2.ZERO, Vector2(0, -0.45), Vector2.ZERO], times)
 	_track(a, NodePath("Rig/VisualRoot:rotation"), [0.0, deg_to_rad(0.4), 0.0], times)
+	# Idle explicitly keys every limb at the neutral pose. This is what makes
+	# walk -> idle a true blend instead of leaving limbs in their last walk pose.
+	_track(a, NodePath("Rig/VisualRoot/ThighL:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/ThighL/ShinL:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/ThighR:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/ThighR/ShinR:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmL:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmL/ForearmL:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmR:rotation"), [0.0, 0.0, 0.0], times)
+	_track(a, NodePath("Rig/VisualRoot/UpperArmR/ForearmR:rotation"), [0.0, 0.0, 0.0], times)
 	return a
 
 func _make_jump() -> Animation:
@@ -269,7 +283,7 @@ func _make_jump() -> Animation:
 	a.length = 0.35
 	a.loop_mode = Animation.LOOP_NONE
 	_track(a, NodePath("Rig/VisualRoot:rotation"), [deg_to_rad(-2), deg_to_rad(3)], [0.0, 0.35])
-	_track(a, NodePath("Rig/VisualRoot:position"), [Vector2(0,-2), Vector2(0,0)], [0.0, 0.35])
+	_track(a, NodePath("Rig/VisualRoot:position"), [Vector2(0,-2), Vector2.ZERO], [0.0, 0.35])
 	return a
 
 func _make_fall() -> Animation:
