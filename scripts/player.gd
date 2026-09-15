@@ -108,7 +108,7 @@ func _draw() -> void:
 	var phase := cycle * TAU
 	var stride := sin(phase)
 	var opposite := -stride
-	var speed_ratio := clamp(abs(velocity.x) / max(sprint_speed, 1.0), 0.0, 1.0)
+	var speed_ratio: float = clamp(abs(velocity.x) / max(sprint_speed, 1.0), 0.0, 1.0)
 
 	var head := Vector2(0.0, -31.0)
 	var neck := Vector2(0.0, -18.5)
@@ -142,7 +142,7 @@ func _draw() -> void:
 		var walk := phase
 		var s := sin(walk)
 		var c := cos(walk)
-		var walk_bob := abs(s) * 1.1
+		var walk_bob: float = abs(s) * 1.1
 		head.y = -31.0 + walk_bob
 		neck.y = -18.0 + walk_bob
 		shoulder_l.y = -15.0 + walk_bob
@@ -160,7 +160,7 @@ func _draw() -> void:
 		var run_phase := phase * 1.45
 		var s := sin(run_phase)
 		var c := cos(run_phase)
-		var run_bob := abs(s) * 2.0
+		var run_bob: float = abs(s) * 2.0
 		head.y = -31.5 + run_bob
 		neck.y = -18.5 + run_bob
 		shoulder_l.y = -15.5 + run_bob
@@ -270,6 +270,7 @@ func _draw() -> void:
 	_limb(neck, Vector2(neck.x, -24.0), 6.0, outline, skin)
 	draw_circle(head, 16.0, outline)
 	draw_circle(head + Vector2(0.0, 0.8), 13.0, skin)
+
 	# Face shading gives the head more volume without external sprites.
 	draw_circle(head + Vector2(-4.5 * d, 4.0), 4.0, skin_shadow)
 	draw_circle(head + Vector2(5.0 * d, -2.5), 2.3, Color(1.0, 1.0, 1.0, 0.9))
