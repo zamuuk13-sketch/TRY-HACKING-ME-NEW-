@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## TRY HACKING ME NOW — startup/runtime diagnostics.
-## This script observes the game. It does not change player physics, input or camera.
+## Observes the game without changing player physics, input or camera.
 
 const PANEL_SIZE := Vector2(560, 430)
 const MARGIN := 18.0
@@ -9,7 +9,7 @@ var panel: ColorRect
 var text: Label
 var status: Label
 var visible_debug := true
-var elapsed := 0.0
+var f9_cooldown := 0.0
 var last_report := ""
 
 func _ready() -> void:
@@ -20,13 +20,12 @@ func _ready() -> void:
 	print("[DEBUG] Press F9 to toggle the diagnostics panel.")
 
 func _process(delta: float) -> void:
-	elapsed += delta
-	if Input.is_key_pressed(KEY_F9):
-		# Debounce using a small timer instead of reacting every frame.
-		if elapsed > 0.25:
-			visible_debug = not visible_debug
-			panel.visible = visible_debug
-			elapsed = 0.0
+	f9_cooldown = maxf(f9_cooldown - delta, 0.0)
+	if Input.is_key_pressed(KEY_F9) and f9_cooldown <= 0.0:
+		visible_debug = not visible_debug
+		panel.visible = visible_debug
+		f9_cooldown = 0.30
+
 	if visible_debug and Engine.get_process_frames() % 30 == 0:
 		_run_diagnostics()
 
@@ -69,38 +68,49 @@ func _run_diagnostics() -> void:
 	var warnings := 0
 
 	var game := get_parent()
-	_check(lines, "Main scene root", game != null, "Game root was not found.", errors, warnings)
+	if not _check(lines, "Main scene root", game != null, "Game root was not found."):
+		errors += 1
 
 	var player := _find_player()
-	_check(lines, "Player node", player != null, "Game/Player does not exist.", errors, warnings)
+	if not _check(lines, "Player node", player != null, "Game/Player does not exist."):
+		errors += 1
 
 	if player != null:
-		_check(lines, "Player visible", player.visible, "Player.visible is false.", errors, warnings)
-		_check(lines, "Player modulate", player.modulate.a > 0.01 and player.self_modulate.a > 0.01, "Player alpha/modulate is transparent.", errors, warnings)
-		_check(lines, "Player z-index", player.z_index > -100, "Player z-index is extremely low and may be behind the world.", errors, warnings)
-		_check(lines, "Player position", is_finite(player.position.x) and is_finite(player.position.y), "Player position contains NaN/Infinity.", errors, warnings)
-		_check(lines, "Player script", player.get_script() != null, "Player has no attached script.", errors, warnings)
+		if not _check(lines, "Player visible", player.visible, "Player.visible is false."):
+			errors += 1
+		if not _check(lines, "Player modulate", player.modulate.a > 0.01 and player.self_modulate.a > 0.01, "Player alpha/modulate is transparent."):
+			errors += 1
+		if not _check(lines, "Player z-index", player.z_index > -100, "Player z-index is extremely low and may be behind the world."):
+			errors += 1
+		if not _check(lines, "Player position", is_finite(player.position.x) and is_finite(player.position.y), "Player position contains NaN/Infinity."):
+			errors += 1
+		if not _check(lines, "Player script", player.get_script() != null, "Player has no attached script."):
+			errors += 1
 
 		var collision := player.get_node_or_null("CollisionShape2D")
-		_check(lines, "Player collision", collision != null and collision.shape != null, "Player collision shape is missing.", errors, warnings)
+		if not _check(lines, "Player collision", collision != null and collision.shape != null, "Player collision shape is missing."):
+			errors += 1
 
 		var camera := player.get_node_or_null("Camera")
 		if camera == null:
 			camera = player.get_node_or_null("Camera2D")
-		_check(lines, "Camera", camera != null, "No Camera/Camera2D child found under Player.", errors, warnings)
-		if camera != null:
-			_check(lines, "Camera enabled", camera.enabled, "Camera exists but is disabled.", errors, warnings)
+		if not _check(lines, "Camera", camera != null, "No Camera/Camera2D child found under Player."):
+			errors += 1
+		if camera != null and not _check(lines, "Camera enabled", camera.enabled, "Camera exists but is disabled."):
+			errors += 1
 
-		var renderer_info := "Renderer: CharacterBody2D + _draw()"
-		lines.append("[INFO] " + renderer_info)
+		lines.append("[INFO] Renderer: CharacterBody2D + _draw()")
 		lines.append("[INFO] Player position: " + str(player.position))
 		lines.append("[INFO] Player velocity: " + str(player.velocity))
 		lines.append("[INFO] Player script: " + str(player.get_script()))
 
-	# Confirm the main world objects expected by Level 01.
-	_check(lines, "World", game.get_node_or_null("World") != null, "World node is missing.", errors, warnings)
-	_check(lines, "Ground", game.get_node_or_null("World/Ground") != null, "World/Ground is missing.", errors, warnings)
-	_check(lines, "Street pole", game.get_node_or_null("World/Level01/Environment/StreetPole_07") != null, "Street pole is missing.", errors, warnings)
+	if not _check(lines, "World", game != null and game.get_node_or_null("World") != null, "World node is missing."):
+		errors += 1
+	if game != null:
+		if not _check(lines, "Ground", game.get_node_or_null("World/Ground") != null, "World/Ground is missing."):
+			errors += 1
+		if not _check(lines, "Street pole", game.get_node_or_null("World/Level01/Environment/StreetPole_07") != null, "Street pole is missing."):
+			errors += 1
 
 	var ok := errors == 0
 	status.text = ("STATUS: OK" if ok else "STATUS: ERRORS FOUND") + "    Errors: %d    Warnings: %d    [F9 = hide/show]" % [errors, warnings]
@@ -113,12 +123,12 @@ func _run_diagnostics() -> void:
 		print(report)
 		print("=======================================\n")
 
-func _check(lines: Array[String], label: String, condition: bool, message: String, errors: int, warnings: int) -> void:
-	# GDScript passes integers by value, so this helper intentionally only formats output.
+func _check(lines: Array[String], label: String, condition: bool, message: String) -> bool:
 	if condition:
 		lines.append("[OK]    " + label)
-	else:
-		lines.append("[ERROR] " + label + " — " + message)
+		return true
+	lines.append("[ERROR] " + label + " — " + message)
+	return false
 
 func is_finite(value: float) -> bool:
 	return not is_nan(value) and not is_inf(value)
