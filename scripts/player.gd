@@ -223,29 +223,38 @@ func _track(animation: Animation, path: NodePath, values: Array, times: Array[fl
 
 func _make_walk() -> Animation:
 	var a: Animation = Animation.new()
-	var duration: float = 8.0 / walk_cycle_fps
+	# The reference contains five authored drawings:
+	# CONTACT -> DOWN -> PASSING -> UP -> CONTACT (opposite side).
+	# We keep exactly those five keyframes and let AnimationPlayer interpolate
+	# between them. The final contact closes the cycle back to frame 0.
+	var duration: float = 4.0 / walk_cycle_fps
 	a.length = duration
 	a.loop_mode = Animation.LOOP_LINEAR
-	var t: Array[float] = [0.0, 1.0 / 12.0, 2.0 / 12.0, 3.0 / 12.0, 4.0 / 12.0, 5.0 / 12.0, 6.0 / 12.0, 7.0 / 12.0, 8.0 / 12.0]
+	var t: Array[float] = [0.0, 1.0 / 4.0, 2.0 / 4.0, 3.0 / 4.0, 4.0 / 4.0]
 	for i in range(t.size()):
 		t[i] *= duration
 
-	# Eight clean landmarks: contact -> down -> passing -> up -> mirrored half.
-	# Legs are always opposite. The forward leg stays separated from the rear leg.
-	var thigh_l: Array[float] = [deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(3), deg_to_rad(13), deg_to_rad(18), deg_to_rad(12), deg_to_rad(-3), deg_to_rad(-13), deg_to_rad(-18)]
-	var shin_l: Array[float] = [deg_to_rad(7), deg_to_rad(18), deg_to_rad(8), deg_to_rad(-1), deg_to_rad(-7), deg_to_rad(-18), deg_to_rad(-8), deg_to_rad(1), deg_to_rad(7)]
-	var thigh_r: Array[float] = [deg_to_rad(18), deg_to_rad(12), deg_to_rad(-3), deg_to_rad(-13), deg_to_rad(-18), deg_to_rad(-12), deg_to_rad(3), deg_to_rad(13), deg_to_rad(18)]
-	var shin_r: Array[float] = [deg_to_rad(-7), deg_to_rad(-18), deg_to_rad(-8), deg_to_rad(1), deg_to_rad(7), deg_to_rad(18), deg_to_rad(8), deg_to_rad(-1), deg_to_rad(-7)]
+	# CONTACT: long stride. One leg reaches forward while the other reaches
+	# behind; the arms oppose the legs just like the reference drawing.
+	# DOWN: the body drops and the front knee bends.
+	# PASSING: the rear foot comes through while the support leg is nearly straight.
+	# UP: the body rises and the legs exchange their roles.
+	# CONTACT: exact mirrored stride, completing the five-drawing cycle.
+	var thigh_l: Array[float] = [deg_to_rad(-26), deg_to_rad(-17), deg_to_rad(-5), deg_to_rad(15), deg_to_rad(26)]
+	var shin_l: Array[float] = [deg_to_rad(-7), deg_to_rad(-23), deg_to_rad(-9), deg_to_rad(4), deg_to_rad(7)]
+	var thigh_r: Array[float] = [deg_to_rad(26), deg_to_rad(17), deg_to_rad(5), deg_to_rad(-15), deg_to_rad(-26)]
+	var shin_r: Array[float] = [deg_to_rad(7), deg_to_rad(23), deg_to_rad(9), deg_to_rad(-4), deg_to_rad(-7)]
 
-	# Arms are the exact counter-swing: when the right leg goes forward,
-	# the right arm goes back; then both exchange sides.
-	var arm_l: Array[float] = [deg_to_rad(15), deg_to_rad(11), deg_to_rad(2), deg_to_rad(-11), deg_to_rad(-15), deg_to_rad(-11), deg_to_rad(-2), deg_to_rad(11), deg_to_rad(15)]
-	var fore_l: Array[float] = [deg_to_rad(-7), deg_to_rad(-11), deg_to_rad(-8), deg_to_rad(-3), deg_to_rad(7), deg_to_rad(11), deg_to_rad(8), deg_to_rad(3), deg_to_rad(-7)]
-	var arm_r: Array[float] = [deg_to_rad(-15), deg_to_rad(-11), deg_to_rad(-2), deg_to_rad(11), deg_to_rad(15), deg_to_rad(11), deg_to_rad(2), deg_to_rad(-11), deg_to_rad(-15)]
-	var fore_r: Array[float] = [deg_to_rad(7), deg_to_rad(11), deg_to_rad(8), deg_to_rad(3), deg_to_rad(-7), deg_to_rad(-11), deg_to_rad(-8), deg_to_rad(-3), deg_to_rad(7)]
+	# Counter-swinging arms. The forearms stay slightly bent rather than rigid,
+	# preserving the hand/arm silhouette of the reference.
+	var arm_l: Array[float] = [deg_to_rad(-20), deg_to_rad(-12), deg_to_rad(-2), deg_to_rad(14), deg_to_rad(20)]
+	var fore_l: Array[float] = [deg_to_rad(7), deg_to_rad(11), deg_to_rad(5), deg_to_rad(-7), deg_to_rad(-7)]
+	var arm_r: Array[float] = [deg_to_rad(20), deg_to_rad(12), deg_to_rad(2), deg_to_rad(-14), deg_to_rad(-20)]
+	var fore_r: Array[float] = [deg_to_rad(-7), deg_to_rad(-11), deg_to_rad(-5), deg_to_rad(7), deg_to_rad(7)]
 
-	var torso_rot: Array[float] = [deg_to_rad(0.8), deg_to_rad(1.1), deg_to_rad(0.7), deg_to_rad(0.0), deg_to_rad(-0.8), deg_to_rad(-1.1), deg_to_rad(-0.7), deg_to_rad(0.0), deg_to_rad(0.8)]
-	var bob: Array[Vector2] = [Vector2.ZERO, Vector2(0, 0.9), Vector2(0, 0.35), Vector2(0, -0.45), Vector2.ZERO, Vector2(0, 0.9), Vector2(0, 0.35), Vector2(0, -0.45), Vector2.ZERO]
+	# Subtle torso movement: down pose is compressed, up pose is lifted.
+	var torso_rot: Array[float] = [deg_to_rad(1.4), deg_to_rad(3.8), deg_to_rad(0.2), deg_to_rad(-2.8), deg_to_rad(-1.4)]
+	var bob: Array[Vector2] = [Vector2.ZERO, Vector2(0, 2.2), Vector2(0, 0.3), Vector2(0, -2.0), Vector2.ZERO]
 
 	_track(a, NodePath("Rig/VisualRoot/ThighL:rotation"), thigh_l, t)
 	_track(a, NodePath("Rig/VisualRoot/ThighL/ShinL:rotation"), shin_l, t)
